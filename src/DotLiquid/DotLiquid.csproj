@@ -1,11 +1,11 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <Description>DotLiquid is a templating system ported to the .NET framework from Ruby’s Liquid Markup.</Description>
     <AssemblyTitle>DotLiquid</AssemblyTitle>
     <NeutralLanguage>en-US</NeutralLanguage>
-    <Authors>Tim Jones;Alessandro Petrelli</Authors>
-    <TargetFrameworks>netstandard1.3;netstandard2.0;net45</TargetFrameworks>
+    <Authors>Tim Jones;Alessandro Petrelli</Authors>      
+    <TargetFrameworks>netcoreapp3.1</TargetFrameworks>
     <AssemblyName>DotLiquid</AssemblyName>
     <AssemblyOriginatorKeyFile>../Formosatek-OpenSource.snk</AssemblyOriginatorKeyFile>
     <SignAssembly>true</SignAssembly>
@@ -39,15 +39,6 @@
     <None Update="LICENSE.txt">
       <Pack>true</Pack>
     </None>
-  </ItemGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.3' ">
-    <DefineConstants>$(DefineConstants);CORE</DefineConstants>
-  </PropertyGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
 </Project>
