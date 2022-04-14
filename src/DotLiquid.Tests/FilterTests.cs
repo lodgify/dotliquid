@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Globalization;
+using System.Threading.Tasks;
 using DotLiquid.Exceptions;
 using NUnit.Framework;
 
@@ -136,7 +137,7 @@ namespace DotLiquid.Tests
         {
             public static string BankStatement(Context context, object input)
             {
-                return string.Format(" " + context["name"] + " has {0:d}$ ", input);
+                return string.Format(" " + context.GetAsync("name").GetAwaiter().GetResult() + " has {0:d}$ ", input);
             }
         }
 
@@ -151,152 +152,152 @@ namespace DotLiquid.Tests
         }
 
         /*[Test]
-        public void TestNonExistentFilter()
+        public async Task TestNonExistentFilter()
         {
-            _context["var"] = 1000;
-            Assert.Throws<FilterNotFoundException>(() => new Variable("var | syzzy").Render(_context));
+            _context.Set("var", 1000);
+            Assert.Throws<FilterNotFoundException>(() => await new Variable("var | syzzy").RenderAsync(_context));
         }*/
 
         [Test]
-        public void TestLocalFilter()
+        public async Task TestLocalFilter()
         {
-            _context["var"] = 1000;
+            _context.Set("var", 1000);
             _context.AddFilters(typeof(MoneyFilter));
-            Assert.AreEqual(" 1000$ ", new Variable("var | money").Render(_context));
+            Assert.AreEqual(" 1000$ ", await new Variable("var | money").RenderAsync(_context));
         }
 
         [Test]
-        public void TestUnderscoreInFilterName()
+        public async Task TestUnderscoreInFilterName()
         {
-            _context["var"] = 1000;
+            _context.Set("var", 1000);
             _context.AddFilters(typeof(MoneyFilter));
-            Assert.AreEqual(" 1000$ ", new Variable("var | money_with_underscore").Render(_context));
+            Assert.AreEqual(" 1000$ ", await new Variable("var | money_with_underscore").RenderAsync(_context));
         }
 
         [Test]
-        public void TestFilterWithNumericArgument()
+        public async Task TestFilterWithNumericArgument()
         {
-            _context["var"] = 1000L;
+            _context.Set("var", 1000L);
             _context.AddFilters(typeof(FiltersWithArgumentsInt));
-            Assert.AreEqual("[1005]", new Variable("var | adjust: 5").Render(_context));
+            Assert.AreEqual("[1005]", await new Variable("var | adjust: 5").RenderAsync(_context));
         }
 
         [Test]
-        public void TestFilterWithNegativeArgument()
+        public async Task TestFilterWithNegativeArgument()
         {
-            _context["var"] = 1000L;
+            _context.Set("var", 1000L);
             _context.AddFilters(typeof(FiltersWithArgumentsInt));
-            Assert.AreEqual("[995]", new Variable("var | adjust: -5").Render(_context));
+            Assert.AreEqual("[995]", await new Variable("var | adjust: -5").RenderAsync(_context));
         }
 
         [Test]
-        public void TestFilterWithDefaultArgument()
+        public async Task TestFilterWithDefaultArgument()
         {
-            _context["var"] = 1000;
+            _context.Set("var", 1000);
             _context.AddFilters(typeof(FiltersWithArgumentsInt));
-            Assert.AreEqual("[1010]", new Variable("var | adjust").Render(_context));
+            Assert.AreEqual("[1010]", await new Variable("var | adjust").RenderAsync(_context));
         }
 
         [Test]
-        public void TestFilterWithTwoArguments()
+        public async Task TestFilterWithTwoArguments()
         {
-            _context["var"] = 1000L;
+            _context.Set("var", 1000L);
             _context.AddFilters(typeof(FiltersWithArgumentsInt));
-            Assert.AreEqual("[1150]", new Variable("var | add_sub: 200, 50").Render(_context));
+            Assert.AreEqual("[1150]", await new Variable("var | add_sub: 200, 50").RenderAsync(_context));
         }
 
         [Test]
-        public void TestFilterWithNumericArgumentLong()
+        public async Task TestFilterWithNumericArgumentLong()
         {
-            _context["var"] = 1000;
+            _context.Set("var", 1000);
             _context.AddFilters(typeof(FiltersWithArgumentsLong));
-            Assert.AreEqual("[1005]", new Variable("var | adjust: 5").Render(_context));
+            Assert.AreEqual("[1005]", await new Variable("var | adjust: 5").RenderAsync(_context));
         }
 
         [Test]
-        public void TestFilterWithNegativeArgumentLong()
+        public async Task TestFilterWithNegativeArgumentLong()
         {
-            _context["var"] = 1000;
+            _context.Set("var", 1000);
             _context.AddFilters(typeof(FiltersWithArgumentsLong));
-            Assert.AreEqual("[995]", new Variable("var | adjust: -5").Render(_context));
+            Assert.AreEqual("[995]", await new Variable("var | adjust: -5").RenderAsync(_context));
         }
 
         [Test]
-        public void TestFilterWithDefaultArgumentLong()
+        public async Task TestFilterWithDefaultArgumentLong()
         {
-            _context["var"] = 1000;
+            _context.Set("var", 1000);
             _context.AddFilters(typeof(FiltersWithArgumentsLong));
-            Assert.AreEqual("[1010]", new Variable("var | adjust").Render(_context));
+            Assert.AreEqual("[1010]", await new Variable("var | adjust").RenderAsync(_context));
         }
 
         [Test]
-        public void TestFilterWithTwoArgumentsLong()
+        public async Task TestFilterWithTwoArgumentsLong()
         {
-            _context["var"] = 1000;
+            _context.Set("var", 1000);
             _context.AddFilters(typeof(FiltersWithArgumentsLong));
-            Assert.AreEqual("[1150]", new Variable("var | add_sub: 200, 50").Render(_context));
+            Assert.AreEqual("[1150]", await new Variable("var | add_sub: 200, 50").RenderAsync(_context));
         }
 
         [Test]
-        public void TestFilterWithMultipleMethodSignatures()
+        public async Task TestFilterWithMultipleMethodSignatures()
         {
             Template.RegisterFilter(typeof(FiltersWithMultipleMethodSignatures));
 
-            Assert.AreEqual("AB", Template.Parse("{{'A' | concatenate : 'B'}}").Render());
-            Assert.AreEqual("ABC", Template.Parse("{{'A' | concatenate : 'B', 'C'}}").Render());
+            Assert.AreEqual("AB", await Template.Parse("{{'A' | concatenate : 'B'}}").RenderAsync());
+            Assert.AreEqual("ABC", await Template.Parse("{{'A' | concatenate : 'B', 'C'}}").RenderAsync());
         }
 
         [Test]
-        public void TestFilterInContextWithMultipleMethodSignatures()
+        public async Task TestFilterInContextWithMultipleMethodSignatures()
         {
             _context.AddFilters(typeof(FiltersWithMultipleMethodSignatures));
 
-            Assert.AreEqual("AB", new Variable("'A' | concatenate : 'B'").Render(_context));
-            Assert.AreEqual("ABC", new Variable("'A' | concatenate : 'B', 'C'").Render(_context));
+            Assert.AreEqual("AB", await new Variable("'A' | concatenate : 'B'").RenderAsync(_context));
+            Assert.AreEqual("ABC", await new Variable("'A' | concatenate : 'B', 'C'").RenderAsync(_context));
         }
 
         [Test]
-        public void TestFilterWithMultipleMethodSignaturesAndContextParam()
+        public async Task TestFilterWithMultipleMethodSignaturesAndContextParam()
         {
             Template.RegisterFilter(typeof(FiltersWithMultipleMethodSignaturesAndContextParam));
 
-            Assert.AreEqual("AB", Template.Parse("{{'A' | concat_with_context : 'B'}}").Render());
-            Assert.AreEqual("ABC", Template.Parse("{{'A' | concat_with_context : 'B', 'C'}}").Render());
+            Assert.AreEqual("AB", await Template.Parse("{{'A' | concat_with_context : 'B'}}").RenderAsync());
+            Assert.AreEqual("ABC", await Template.Parse("{{'A' | concat_with_context : 'B', 'C'}}").RenderAsync());
         }
 
         [Test]
-        public void TestFilterInContextWithMultipleMethodSignaturesAndContextParam()
+        public async Task TestFilterInContextWithMultipleMethodSignaturesAndContextParam()
         {
             _context.AddFilters(typeof(FiltersWithMultipleMethodSignaturesAndContextParam));
 
-            Assert.AreEqual("AB", new Variable("'A' | concat_with_context : 'B'").Render(_context));
-            Assert.AreEqual("ABC", new Variable("'A' | concat_with_context : 'B', 'C'").Render(_context));
+            Assert.AreEqual("AB", await new Variable("'A' | concat_with_context : 'B'").RenderAsync(_context));
+            Assert.AreEqual("ABC", await new Variable("'A' | concat_with_context : 'B', 'C'").RenderAsync(_context));
         }
 
         [Test]
-        public void TestFilterWithMultipleMethodSignaturesDifferentClasses()
+        public async Task TestFilterWithMultipleMethodSignaturesDifferentClasses()
         {
             Template.RegisterFilter(typeof(FiltersWithMultipleMethodSignaturesDifferentClassesOne));
             Template.RegisterFilter(typeof(FiltersWithMultipleMethodSignaturesDifferentClassesTwo));
 
-            Assert.AreEqual("AB", Template.Parse("{{'A' | concatenate : 'B'}}").Render());
-            Assert.AreEqual("ABC", Template.Parse("{{'A' | concatenate : 'B', 'C'}}").Render());
+            Assert.AreEqual("AB", await Template.Parse("{{'A' | concatenate : 'B'}}").RenderAsync());
+            Assert.AreEqual("ABC", await Template.Parse("{{'A' | concatenate : 'B', 'C'}}").RenderAsync());
         }
 
         [Test]
-        public void TestFilterInContextWithMultipleMethodSignaturesDifferentClasses()
+        public async Task TestFilterInContextWithMultipleMethodSignaturesDifferentClasses()
         {
             _context.AddFilters(typeof(FiltersWithMultipleMethodSignaturesDifferentClassesOne));
             _context.AddFilters(typeof(FiltersWithMultipleMethodSignaturesDifferentClassesTwo));
 
-            Assert.AreEqual("AB", new Variable("'A' | concatenate : 'B'").Render(_context));
-            Assert.AreEqual("ABC", new Variable("'A' | concatenate : 'B', 'C'").Render(_context));
+            Assert.AreEqual("AB", await new Variable("'A' | concatenate : 'B'").RenderAsync(_context));
+            Assert.AreEqual("ABC", await new Variable("'A' | concatenate : 'B', 'C'").RenderAsync(_context));
         }
 
         [Test]
-        public void TestFilterAsLocalFilterWithMultipleMethodSignaturesDifferentClasses()
+        public async Task TestFilterAsLocalFilterWithMultipleMethodSignaturesDifferentClasses()
         {
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "AB // ABC",
                 template: "{{'A' | concatenate : 'B'}} // {{'A' | concatenate : 'B', 'C'}}",
                 localVariables: null,
@@ -304,19 +305,18 @@ namespace DotLiquid.Tests
         }
 
         [Test]
-        public void TestFilterWithMultipleMethodSignaturesAndContextParamInDifferentClasses()
+        public async Task TestFilterWithMultipleMethodSignaturesAndContextParamInDifferentClasses()
         {
             Template.RegisterFilter(typeof(FiltersWithMultipleMethodSignaturesDifferentClassesWithContextParamTwo));
             Template.RegisterFilter(typeof(FiltersWithMultipleMethodSignaturesDifferentClassesWithContextParamOne));
-            Assert.AreEqual("AB", Template.Parse("{{'A' | concat_with_context : 'B'}}").Render());
-            Assert.AreEqual("ABC", Template.Parse("{{'A' | concat_with_context : 'B', 'C'}}").Render());
+            Assert.AreEqual("AB", await Template.Parse("{{'A' | concat_with_context : 'B'}}").RenderAsync());
+            Assert.AreEqual("ABC", await Template.Parse("{{'A' | concat_with_context : 'B', 'C'}}").RenderAsync());
         }
 
         [Test]
-        public void TestFilterAsLocalFilterWithMultipleMethodSignaturesAndContextDifferentClasses()
+        public async Task TestFilterAsLocalFilterWithMultipleMethodSignaturesAndContextDifferentClasses()
         {
-
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "AB // ABC",
                 template: "{{'A' | concat_with_context : 'B'}} // {{'A' | concat_with_context : 'B', 'C'}}",
                 localVariables: null,
@@ -324,46 +324,46 @@ namespace DotLiquid.Tests
         }
 
         [Test]
-        public void TestFilterInContextWithMultipleMethodSignaturesAndContextParamInDifferentClasses()
+        public async Task TestFilterInContextWithMultipleMethodSignaturesAndContextParamInDifferentClasses()
         {
             _context.AddFilters(typeof(FiltersWithMultipleMethodSignaturesDifferentClassesWithContextParamOne));
             _context.AddFilters(typeof(FiltersWithMultipleMethodSignaturesDifferentClassesWithContextParamTwo));
 
-            Assert.AreEqual("AB", new Variable("'A' | concat_with_context : 'B'").Render(_context));
-            Assert.AreEqual("ABC", new Variable("'A' | concat_with_context : 'B', 'C'").Render(_context));
+            Assert.AreEqual("AB", await new Variable("'A' | concat_with_context : 'B'").RenderAsync(_context));
+            Assert.AreEqual("ABC", await new Variable("'A' | concat_with_context : 'B', 'C'").RenderAsync(_context));
         }
 
         [Test]
         // When two methods with the same name and method signature are registered, the method that is added last is preferred.
         // This allows overriding any existing methods, including methods defined in the DotLiqid library.
         // This is useful in cases where a defined method may need to have a different behavior in certain contexts.
-        public void TestFilterOverridesMethodWithSameMethodSignaturesDifferentClasses()
+        public async Task TestFilterOverridesMethodWithSameMethodSignaturesDifferentClasses()
         {
             Template.RegisterFilter(typeof(FilterWithSameMethodSignatureDifferentClassTwo));
             Template.RegisterFilter(typeof(FilterWithSameMethodSignatureDifferentClassOne));
 
-            Assert.AreEqual("ABClass One", Template.Parse("{{'A' | concatenate : 'B'}}").Render());
-            Assert.AreNotEqual("ABClass Two", Template.Parse("{{'A' | concatenate : 'B'}}").Render());
+            Assert.AreEqual("ABClass One", await Template.Parse("{{'A' | concatenate : 'B'}}").RenderAsync());
+            Assert.AreNotEqual("ABClass Two", await Template.Parse("{{'A' | concatenate : 'B'}}").RenderAsync());
         }
 
         [Test]
-        public void TestFilterInContextOverridesMethodWithSameMethodSignaturesDifferentClasses()
+        public async Task TestFilterInContextOverridesMethodWithSameMethodSignaturesDifferentClasses()
         {
             _context.AddFilters(typeof(FilterWithSameMethodSignatureDifferentClassOne));
             _context.AddFilters(typeof(FilterWithSameMethodSignatureDifferentClassTwo));
 
-            Assert.AreEqual("ABClass Two", new Variable("'A' | concatenate : 'B'").Render(_context));
-            Assert.AreNotEqual("ABClass One", new Variable("'A' | concatenate : 'B'").Render(_context));
+            Assert.AreEqual("ABClass Two", await new Variable("'A' | concatenate : 'B'").RenderAsync(_context));
+            Assert.AreNotEqual("ABClass One", await new Variable("'A' | concatenate : 'B'").RenderAsync(_context));
         }
 
         [Test]
-        public void TestFilterAsLocalOverridesMethodWithSameMethodSignaturesDifferentClasses()
+        public async Task TestFilterAsLocalOverridesMethodWithSameMethodSignaturesDifferentClasses()
         {
-            Helper.AssertTemplateResult(
-                           expected: "ABClass One",
-                           template: "{{'A' | concatenate : 'B'}}",
-                           localVariables: null,
-                           localFilters: new[] { typeof(FilterWithSameMethodSignatureDifferentClassTwo), typeof(FilterWithSameMethodSignatureDifferentClassOne) });
+            await Helper.AssertTemplateResultAsync(
+                expected: "ABClass One",
+                template: "{{'A' | concatenate : 'B'}}",
+                localVariables: null,
+                localFilters: new[] { typeof(FilterWithSameMethodSignatureDifferentClassTwo), typeof(FilterWithSameMethodSignatureDifferentClassOne) });
         }
 
         /*/// <summary>
@@ -372,99 +372,99 @@ namespace DotLiquid.Tests
         [Test]
         public void TestFilterWithTwoArgumentsNoComma()
         {
-            _context["var"] = 1000;
+            _context.Set("var", 1000);
             _context.AddFilters(typeof(FiltersWithArguments));
-            Assert.AreEqual("[1150]", string.Join(string.Empty, new Variable("var | add_sub: 200 50").Render(_context));
+            Assert.AreEqual("[1150]", string.Join(string.Empty, await new Variable("var | add_sub: 200 50").RenderAsync(_context));
         }*/
 
         [Test]
-        public void TestSecondFilterOverwritesFirst()
+        public async Task TestSecondFilterOverwritesFirst()
         {
-            _context["var"] = 1000;
+            _context.Set("var", 1000);
             _context.AddFilters(typeof(MoneyFilter));
             _context.AddFilters(typeof(CanadianMoneyFilter));
-            Assert.AreEqual(" 1000$ CAD ", new Variable("var | money").Render(_context));
+            Assert.AreEqual(" 1000$ CAD ", await new Variable("var | money").RenderAsync(_context));
         }
 
         [Test]
-        public void TestSize()
+        public async Task TestSize()
         {
-            _context["var"] = "abcd";
+            _context.Set("var", "abcd");
             _context.AddFilters(typeof(MoneyFilter));
-            Assert.AreEqual(4, new Variable("var | size").Render(_context));
+            Assert.AreEqual(4, await new Variable("var | size").RenderAsync(_context));
         }
 
         [Test]
-        public void TestJoin()
+        public async Task TestJoin()
         {
-            _context["var"] = new[] { 1, 2, 3, 4 };
-            Assert.AreEqual("1 2 3 4", new Variable("var | join").Render(_context));
+            _context.Set("var", new[] { 1, 2, 3, 4 });
+            Assert.AreEqual("1 2 3 4", await new Variable("var | join").RenderAsync(_context));
         }
 
         [Test]
-        public void TestSort()
+        public async Task TestSort()
         {
-            _context["value"] = 3;
-            _context["numbers"] = new[] { 2, 1, 4, 3 };
-            _context["words"] = new[] { "expected", "as", "alphabetic" };
-            _context["arrays"] = new[] { new[] { "flattened" }, new[] { "are" } };
+            _context.Set("value", 3);
+            _context.Set("numbers", new[] { 2, 1, 4, 3 });
+            _context.Set("words", new[] { "expected", "as", "alphabetic" });
+            _context.Set("arrays", new[] { new[] { "flattened" }, new[] { "are" } });
 
-            CollectionAssert.AreEqual(new[] { 1, 2, 3, 4 }, new Variable("numbers | sort").Render(_context) as IEnumerable);
-            CollectionAssert.AreEqual(new[] { "alphabetic", "as", "expected" }, new Variable("words | sort").Render(_context) as IEnumerable);
-            CollectionAssert.AreEqual(new[] { 3 }, new Variable("value | sort").Render(_context) as IEnumerable);
-            CollectionAssert.AreEqual(new[] { "are", "flattened" }, new Variable("arrays | sort").Render(_context) as IEnumerable);
+            CollectionAssert.AreEqual(new[] { 1, 2, 3, 4 }, await new Variable("numbers | sort").RenderAsync(_context) as IEnumerable);
+            CollectionAssert.AreEqual(new[] { "alphabetic", "as", "expected" }, await new Variable("words | sort").RenderAsync(_context) as IEnumerable);
+            CollectionAssert.AreEqual(new[] { 3 }, await new Variable("value | sort").RenderAsync(_context) as IEnumerable);
+            CollectionAssert.AreEqual(new[] { "are", "flattened" }, await new Variable("arrays | sort").RenderAsync(_context) as IEnumerable);
         }
 
         [Test]
-        public void TestSplit()
+        public async Task TestSplit()
         {
-            _context["var"] = "a~b";
-            Assert.AreEqual(new[] { "a", "b" }, new Variable("var | split:'~'").Render(_context));
+            _context.Set("var", "a~b");
+            Assert.AreEqual(new[] { "a", "b" }, await new Variable("var | split:'~'").RenderAsync(_context));
         }
 
         [Test]
-        public void TestStripHtml()
+        public async Task TestStripHtml()
         {
-            _context["var"] = "<b>bla blub</a>";
-            Assert.AreEqual("bla blub", new Variable("var | strip_html").Render(_context));
+            _context.Set("var", "<b>bla blub</a>");
+            Assert.AreEqual("bla blub", await new Variable("var | strip_html").RenderAsync(_context));
         }
 
         [Test]
-        public void Capitalize()
+        public async Task Capitalize()
         {
-            _context["var"] = "blub";
-            Assert.AreEqual("Blub", new Variable("var | capitalize").Render(_context));
+            _context.Set("var", "blub");
+            Assert.AreEqual("Blub", await new Variable("var | capitalize").RenderAsync(_context));
         }
 
         [Test]
-        public void Slice()
+        public async Task Slice()
         {
-            _context["var"] = "blub";
-            Assert.AreEqual("b", new Variable("var | slice: 0, 1").Render(_context));
-            Assert.AreEqual("bl", new Variable("var | slice: 0, 2").Render(_context));
-            Assert.AreEqual("l", new Variable("var | slice: 1").Render(_context));
-            Assert.AreEqual("", new Variable("var | slice: 4, 1").Render(_context));
-            Assert.AreEqual("ub", new Variable("var | slice: -2, 2").Render(_context));
-            Assert.AreEqual(null, new Variable("var | slice: 5, 1").Render(_context));
+            _context.Set("var", "blub");
+            Assert.AreEqual("b", await new Variable("var | slice: 0, 1").RenderAsync(_context));
+            Assert.AreEqual("bl", await new Variable("var | slice: 0, 2").RenderAsync(_context));
+            Assert.AreEqual("l", await new Variable("var | slice: 1").RenderAsync(_context));
+            Assert.AreEqual("", await new Variable("var | slice: 4, 1").RenderAsync(_context));
+            Assert.AreEqual("ub", await new Variable("var | slice: -2, 2").RenderAsync(_context));
+            Assert.AreEqual(null, await new Variable("var | slice: 5, 1").RenderAsync(_context));
         }
 
         [Test]
-        public void TestLocalGlobal()
+        public async Task TestLocalGlobal()
         {
             Template.RegisterFilter(typeof(MoneyFilter));
 
-            Assert.AreEqual(" 1000$ ", Template.Parse("{{1000 | money}}").Render());
-            Assert.AreEqual(" 1000$ CAD ", Template.Parse("{{1000 | money}}").Render(new RenderParameters(CultureInfo.InvariantCulture) { Filters = new[] { typeof(CanadianMoneyFilter) } }));
-            Assert.AreEqual(" 1000$ CAD ", Template.Parse("{{1000 | money}}").Render(new RenderParameters(CultureInfo.InvariantCulture) { Filters = new[] { typeof(CanadianMoneyFilter) } }));
+            Assert.AreEqual(" 1000$ ", await Template.Parse("{{1000 | money}}").RenderAsync());
+            Assert.AreEqual(" 1000$ CAD ", await Template.Parse("{{1000 | money}}").RenderAsync(new RenderParameters(CultureInfo.InvariantCulture) { Filters = new[] { typeof(CanadianMoneyFilter) } }));
+            Assert.AreEqual(" 1000$ CAD ", await Template.Parse("{{1000 | money}}").RenderAsync(new RenderParameters(CultureInfo.InvariantCulture) { Filters = new[] { typeof(CanadianMoneyFilter) } }));
         }
 
         [Test]
-        public void TestContextFilter()
+        public async Task TestContextFilter()
         {
-            _context["var"] = 1000;
-            _context["name"] = "King Kong";
+            _context.Set("var", 1000);
+            _context.Set("name", "King Kong");
             _context.AddFilters(typeof(ContextFilters));
-            Assert.AreEqual(" King Kong has 1000$ ", new Variable("var | bank_statement").Render(_context));
+            Assert.AreEqual(" King Kong has 1000$ ", await new Variable("var | bank_statement").RenderAsync(_context));
         }
     }
 }

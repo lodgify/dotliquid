@@ -1,5 +1,6 @@
 using DotLiquid.FileSystems;
 using NUnit.Framework;
+using System.Threading.Tasks;
 
 namespace DotLiquid.Tests.Tags
 {
@@ -8,11 +9,11 @@ namespace DotLiquid.Tests.Tags
     {
         private class TestFileSystem : IFileSystem
         {
-            public string ReadTemplateFile (Context context, string templateName)
+            public async Task<string> ReadTemplateFileAsync(Context context, string templateName)
             {
-                string templatePath = (string)context [templateName];
+                string templatePath = (string)await context.GetAsync(templateName);
 
-                switch (templatePath) {
+                switch(templatePath) {
                 case "simple":
                     return "test";
                 case "complex":
@@ -27,7 +28,7 @@ namespace DotLiquid.Tests.Tags
                 case "nested":
                     return @"{% extends 'complex' %}
                              {% block thing %}
-                                another thing (from nested)
+                                another thing(from nested)
                              {% endblock %}";
                 case "outer":
                     return "{% block start %}{% endblock %}A{% block outer %}{% endblock %}Z";
@@ -40,7 +41,7 @@ namespace DotLiquid.Tests.Tags
                 default:
                     return @"{% extends 'complex' %}
                              {% block thing %}
-                                thing block (from nested)
+                                thing block(from nested)
                              {% endblock %}";
                 }
             }
@@ -49,132 +50,134 @@ namespace DotLiquid.Tests.Tags
         private IFileSystem _originalFileSystem;
 
         [OneTimeSetUp]
-        public void SetUp ()
+        public async Task SetUp()
         {
             _originalFileSystem = Template.FileSystem;
-            Template.FileSystem = new TestFileSystem ();
+            Template.FileSystem = new TestFileSystem();
+            await Task.Yield();
         }
 
         [OneTimeTearDown]
-        public void TearDown ()
+        public async Task TearDown()
         {
             Template.FileSystem = _originalFileSystem;
+            await Task.Yield();
         }
 
         [Test]
-        public void CanOutputTheContentsOfTheExtendedTemplate ()
+        public async Task CanOutputTheContentsOfTheExtendedTemplate()
         {
-            Template template = Template.Parse (
+            Template template = Template.Parse(
                                     @"{% extends 'simple' %}
                     {% block thing %}
                         yeah
                     {% endblock %}");
 
-            StringAssert.Contains ("test", template.Render ());
+            StringAssert.Contains("test", await template.RenderAsync());
         }
 
         [Test]
-        public void CanInherit ()
+        public async Task CanInherit()
         {
-            Template template = Template.Parse (@"{% extends 'complex' %}");
+            Template template = Template.Parse(@"{% extends 'complex' %}");
 
-            StringAssert.Contains ("thing block", template.Render ());
+            StringAssert.Contains("thing block", await template.RenderAsync());
         }
 
         [Test]
-        public void CanInheritAndReplaceBlocks ()
+        public async Task CanInheritAndReplaceBlocks()
         {
-            Template template = Template.Parse (
+            Template template = Template.Parse(
                                     @"{% extends 'complex' %}
                     {% block another %}
                       new content for another
                     {% endblock %}");
 
-            StringAssert.Contains ("new content for another", template.Render ());
+            StringAssert.Contains("new content for another", await template.RenderAsync());
         }
 
         [Test]
-        public void CanProcessNestedInheritance ()
+        public async Task CanProcessNestedInheritance()
         {
-            Template template = Template.Parse (
+            Template template = Template.Parse(
                                     @"{% extends 'nested' %}
                   {% block thing %}
                   replacing block thing
                   {% endblock %}");
 
-            StringAssert.Contains ("replacing block thing", template.Render ());
-            StringAssert.DoesNotContain ("thing block", template.Render ());
+            StringAssert.Contains("replacing block thing", await template.RenderAsync());
+            StringAssert.DoesNotContain("thing block", await template.RenderAsync());
         }
 
         [Test]
-        public void CanRenderSuper ()
+        public async Task CanRenderSuper()
         {
-            Template template = Template.Parse (
+            Template template = Template.Parse(
                                     @"{% extends 'complex' %}
                     {% block another %}
                         {{ block.super }} + some other content
                     {% endblock %}");
-
-            StringAssert.Contains ("another block", template.Render ());
-            StringAssert.Contains ("some other content", template.Render ());
+                        
+            StringAssert.Contains("another block", await template.RenderAsync());
+            StringAssert.Contains("some other content", await template.RenderAsync());
         }
 
         [Test]
-        public void CanDefineBlockInInheritedBlock ()
+        public async Task CanDefineBlockInInheritedBlock()
         {
-            Template template = Template.Parse (
+            Template template = Template.Parse(
                                     @"{% extends 'middle' %}
                   {% block middle %}C{% endblock %}");
-            Assert.AreEqual ("ABCYZ", template.Render ());
+            Assert.AreEqual("ABCYZ", await template.RenderAsync());
         }
 
         [Test]
-        public void CanDefineContentInInheritedBlockFromAboveParent ()
+        public async Task CanDefineContentInInheritedBlockFromAboveParent()
         {
-            Template template = Template.Parse (@"{% extends 'middle' %}
+            Template template = Template.Parse(@"{% extends 'middle' %}
                   {% block start %}!{% endblock %}");
-            Assert.AreEqual ("!ABYZ", template.Render ());
+            Assert.AreEqual("!ABYZ", await template.RenderAsync());
         }
 
         [Test]
-        public void CanRenderBlockContainedInConditional ()
+        public async Task CanRenderBlockContainedInConditional()
         {
-            Template template = Template.Parse (
+            Template template = Template.Parse(
                                     @"{% extends 'middleunless' %}
                   {% block middle %}C{% endblock %}");
-            Assert.AreEqual ("ABCYZ", template.Render ());
+            Assert.AreEqual("ABCYZ", await template.RenderAsync());
 
-            template = Template.Parse (
+            template = Template.Parse(
                 @"{% extends 'middleunless' %}
                   {% block start %}{% assign nomiddle = true %}{% endblock %}
                   {% block middle %}C{% endblock %}");
-            Assert.AreEqual ("ABYZ", template.Render ());
+            Assert.AreEqual("ABYZ", await template.RenderAsync());
         }
 
         [Test]
-        public void RepeatedRendersProduceSameResult ()
+        public async Task RepeatedRendersProduceSameResult()
         {
-            Template template = Template.Parse (
+            Template template = Template.Parse(
                                     @"{% extends 'middle' %}
                   {% block start %}!{% endblock %}
                   {% block middle %}C{% endblock %}");
-            Assert.AreEqual ("!ABCYZ", template.Render ());
-            Assert.AreEqual ("!ABCYZ", template.Render ());
+            Assert.AreEqual("!ABCYZ", await template.RenderAsync());
+            Assert.AreEqual("!ABCYZ", await template.RenderAsync());
         }
 
         [Test]
-        public void TestExtendFromTemplateFileSystem()
+        public async Task TestExtendFromTemplateFileSystem()
         {
             var fileSystem = new IncludeTagTests.TestTemplateFileSystem(new TestFileSystem());
             Template.FileSystem = fileSystem;
-            for (int i = 0; i < 2; ++i)
+            for(int i = 0; i < 2; ++i)
             {
                 Template template = Template.Parse(
                                     @"{% extends 'simple' %}
                     {% block thing %}
                         yeah
                     {% endblock %}");
-                StringAssert.Contains("test", template.Render());
+                StringAssert.Contains("test", await template.RenderAsync());
             }
             Assert.AreEqual(fileSystem.CacheHitTimes, 1);
         }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using DotLiquid.Exceptions;
 using DotLiquid.Util;
 
@@ -44,15 +45,15 @@ namespace DotLiquid.Tags
                 base.UnknownTag(tag, markup, tokens);
         }
 
-        public override void Render(Context context, TextWriter result)
+        public override async Task RenderAsync(Context context, TextWriter result)
         {
-            context.Stack(() =>
+            await context.StackAsync(async () =>
             {
                 foreach (Condition block in Blocks)
                 {
-                    if (block.Evaluate(context, result.FormatProvider))
+                    if (await block.EvaluateAsync(context, result.FormatProvider))
                     {
-                        RenderAll(block.Attachment, context, result);
+                        await RenderAllAsync(block.Attachment, context, result);
                         return;
                     }
                 }

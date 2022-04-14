@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using DotLiquid.Util;
 using NUnit.Framework;
 
@@ -72,9 +73,9 @@ namespace DotLiquid.Tests.Util
         }
 
         [Test]
-        public void TestIsTruthy_ShopifySample1()
+        public async Task TestIsTruthy_ShopifySample1()
         {
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: @"
 
 
@@ -89,14 +90,14 @@ namespace DotLiquid.Tests.Util
         }
 
         [Test]
-        public void TestIsTruthy_ShopifySample2()
+        public async Task TestIsTruthy_ShopifySample2()
         {
             var page = new
             {
                 category = "" // exists, but empty
             };
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
             expected: @"
   <h1></h1>
 ",

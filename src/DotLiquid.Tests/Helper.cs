@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using DotLiquid.NamingConventions;
 using NUnit.Framework;
 
@@ -7,7 +9,8 @@ namespace DotLiquid.Tests
 {
     public class Helper
     {
-        public static void LockTemplateStaticVars(INamingConvention namingConvention, Action test)
+        static readonly SemaphoreSlim SemaphoreSlim = new SemaphoreSlim(1, 1);
+        public static async Task LockTemplateStaticVarsAsync(INamingConvention namingConvention, Func<Task> test)
         {
             //Have to lock Template.NamingConvention for this test to
             //prevent other tests from being run simultaneously that
@@ -15,27 +18,27 @@ namespace DotLiquid.Tests
             var currentNamingConvention = Template.NamingConvention;
             var currentSyntax = Template.DefaultSyntaxCompatibilityLevel;
             var currentIsRubyDateFormat = Liquid.UseRubyDateFormat;
-            lock (Template.NamingConvention)
-            {
-                Template.NamingConvention = namingConvention;
+            await SemaphoreSlim.WaitAsync();            
+            Template.NamingConvention = namingConvention;
 
-                try
-                {
-                    test();
-                }
-                finally
-                {
-                    Template.NamingConvention = currentNamingConvention;
-                    Template.DefaultSyntaxCompatibilityLevel = currentSyntax;
-                    Liquid.UseRubyDateFormat = currentIsRubyDateFormat;
-                }
+            try
+            {
+                await test();
             }
+            finally
+            {
+                Template.NamingConvention = currentNamingConvention;
+                Template.DefaultSyntaxCompatibilityLevel = currentSyntax;
+                Liquid.UseRubyDateFormat = currentIsRubyDateFormat;
+                SemaphoreSlim.Release();
+            }
+            
         }
 
 
-        public static void AssertTemplateResult(string expected, string template, object anonymousObject, INamingConvention namingConvention, SyntaxCompatibility syntax = SyntaxCompatibility.DotLiquid20)
+        public static async Task AssertTemplateResultAsync(string expected, string template, object anonymousObject, INamingConvention namingConvention, SyntaxCompatibility syntax = SyntaxCompatibility.DotLiquid20)
         {
-            LockTemplateStaticVars(namingConvention, () =>
+            await LockTemplateStaticVarsAsync(namingConvention, async () =>
             {
                 var localVariables = anonymousObject == null ? null : Hash.FromAnonymousObject(anonymousObject);
                 var parameters = new RenderParameters(System.Globalization.CultureInfo.CurrentCulture)
@@ -43,16 +46,16 @@ namespace DotLiquid.Tests
                     LocalVariables = localVariables,
                     SyntaxCompatibilityLevel = syntax
                 };
-                Assert.AreEqual(expected, Template.Parse(template).Render(parameters));
+                Assert.AreEqual(expected, await Template.Parse(template).RenderAsync(parameters));
             });
         }
 
-        public static void AssertTemplateResult(string expected, string template, INamingConvention namingConvention)
+        public static Task AssertTemplateResultAsync(string expected, string template, INamingConvention namingConvention)
         {
-            AssertTemplateResult(expected: expected, template: template, anonymousObject: null, namingConvention: namingConvention);
+            return AssertTemplateResultAsync(expected: expected, template: template, anonymousObject: null, namingConvention: namingConvention);
         }
 
-        public static void AssertTemplateResult(string expected, string template, Hash localVariables, IEnumerable<Type> localFilters, SyntaxCompatibility syntax = SyntaxCompatibility.DotLiquid20)
+        public static async Task AssertTemplateResultAsync(string expected, string template, Hash localVariables, IEnumerable<Type> localFilters, SyntaxCompatibility syntax = SyntaxCompatibility.DotLiquid20)
         {
             var parameters = new RenderParameters(System.Globalization.CultureInfo.CurrentCulture)
             {
@@ -60,17 +63,17 @@ namespace DotLiquid.Tests
                 SyntaxCompatibilityLevel = syntax,
                 Filters = localFilters
             };
-            Assert.AreEqual(expected, Template.Parse(template).Render(parameters));
+            Assert.AreEqual(expected, await Template.Parse(template).RenderAsync(parameters));
         }
 
-        public static void AssertTemplateResult(string expected, string template, Hash localVariables, SyntaxCompatibility syntax = SyntaxCompatibility.DotLiquid20)
+        public static Task AssertTemplateResultAsync(string expected, string template, Hash localVariables, SyntaxCompatibility syntax = SyntaxCompatibility.DotLiquid20)
         {
-            AssertTemplateResult(expected: expected, template: template, localVariables: localVariables, localFilters: null, syntax: syntax);
+            return AssertTemplateResultAsync(expected: expected, template: template, localVariables: localVariables, localFilters: null, syntax: syntax);
         }
 
-        public static void AssertTemplateResult(string expected, string template, SyntaxCompatibility syntax = SyntaxCompatibility.DotLiquid20)
+        public static Task AssertTemplateResultAsync(string expected, string template, SyntaxCompatibility syntax = SyntaxCompatibility.DotLiquid20)
         {
-            AssertTemplateResult(expected: expected, template: template, localVariables: null, syntax: syntax);
+            return AssertTemplateResultAsync(expected: expected, template: template, localVariables: null, syntax: syntax);
         }
 
         [LiquidTypeAttribute("PropAllowed")]

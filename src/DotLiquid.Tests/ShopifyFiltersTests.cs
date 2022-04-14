@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Threading.Tasks;
 using NUnit.Framework;
 
 namespace DotLiquid.Tests
@@ -7,7 +8,7 @@ namespace DotLiquid.Tests
     public class ShopifyFiltersTests
     {
         [Test]
-        public void TestMd5()
+        public async Task TestMd5()
         {
             Assert.AreEqual(null, ShopifyFilters.Md5(null));
             Assert.AreEqual("d41d8cd98f00b204e9800998ecf8427e", ShopifyFilters.Md5(""));
@@ -15,7 +16,7 @@ namespace DotLiquid.Tests
                 expected: "11de0bf2a16fdb9d4f3780a0d2fd95c7",
                 actual: ShopifyFilters.Md5("ShopifyIsAwesome!"));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: @"<img src=""https://www.gravatar.com/avatar/80846a33ae3e3603c1c5d6ce72834924"" />",
                 template: @"<img src=""https://www.gravatar.com/avatar/{{ comment.email | remove: ' ' | strip_newlines | downcase | md5 }}"" />",
                 localVariables: Hash.FromAnonymousObject(new { comment = new { email = " Joe.Bloggs@Shopify.com " } }),
@@ -23,7 +24,7 @@ namespace DotLiquid.Tests
         }
 
         [Test]
-        public void TestSha1()
+        public async Task TestSha1()
         {
             Assert.AreEqual(null, ShopifyFilters.Sha1(null));
             Assert.AreEqual("da39a3ee5e6b4b0d3255bfef95601890afd80709", ShopifyFilters.Sha1(""));
@@ -31,7 +32,7 @@ namespace DotLiquid.Tests
                 expected: "c7322e3812d3da7bc621300ca1797517c34f63b6",
                 actual: ShopifyFilters.Sha1("ShopifyIsAwesome!"));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: @"
 My encoded string is: c7322e3812d3da7bc621300ca1797517c34f63b6",
                 template: @"{% assign my_secret_string = ""ShopifyIsAwesome!"" | sha1 %}
@@ -41,7 +42,7 @@ My encoded string is: {{ my_secret_string }}",
         }
 
         [Test]
-        public void TestSha256()
+        public async Task TestSha256()
         {
             Assert.AreEqual(null, ShopifyFilters.Sha256(null));
             Assert.AreEqual("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", ShopifyFilters.Sha256(""));
@@ -49,7 +50,7 @@ My encoded string is: {{ my_secret_string }}",
                 expected: "c29cce758876791f34b8a1543f0ec3f8e886b5271004d473cfe75ac3148463cb",
                 actual: ShopifyFilters.Sha256("ShopifyIsAwesome!"));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: @"
 My encoded string is: c29cce758876791f34b8a1543f0ec3f8e886b5271004d473cfe75ac3148463cb",
                 template: @"{% assign my_secret_string = ""ShopifyIsAwesome!"" | sha256 %}
@@ -59,7 +60,7 @@ My encoded string is: {{ my_secret_string }}",
         }
 
         [Test]
-        public void TestHmacSha1()
+        public async Task TestHmacSha1()
         {
             Assert.AreEqual(null, ShopifyFilters.HmacSha1(null, null));
             Assert.AreEqual("", ShopifyFilters.HmacSha1("", null));
@@ -73,7 +74,7 @@ My encoded string is: {{ my_secret_string }}",
             Assert.AreEqual("e45659e65fef13dfa71554d14718718a080acb11", ShopifyFilters.HmacSha1("ShopifyIsAwesome!", "\u0000")); //NULL
             Assert.AreEqual("17434e86f6ed25cfcc31ab7901cdedee29c988da", ShopifyFilters.HmacSha1("ShopifyIsAwesome!", "\uDB40\uDDEF")); //VARIATION SELECTOR-256
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: @"
 My encoded string is: 30ab3459e46e7b209b45dba8378fcbba67297304",
                 template: @"{% assign my_secret_string = ""ShopifyIsAwesome!"" | hmac_sha1: ""secret_key"" %}
@@ -83,7 +84,7 @@ My encoded string is: {{ my_secret_string }}",
         }
 
         [Test]
-        public void TestHmacSha256()
+        public async Task TestHmacSha256()
         {
             Assert.AreEqual(null, ShopifyFilters.HmacSha256(null, null));
             Assert.AreEqual("", ShopifyFilters.HmacSha256("", null));
@@ -96,7 +97,7 @@ My encoded string is: {{ my_secret_string }}",
                 expected: "c21f97cf997fac667c9bac39462a5813b1a41ce1b811743b0e9157393efbcc3c",
                 actual: ShopifyFilters.HmacSha256("ShopifyIsAwesome!", "secret_key"));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: @"
 My encoded string is: c21f97cf997fac667c9bac39462a5813b1a41ce1b811743b0e9157393efbcc3c",
                 template: @"{% assign my_secret_string = ""ShopifyIsAwesome!"" | hmac_sha256: ""secret_key"" %}

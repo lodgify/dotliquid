@@ -1,7 +1,8 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using DotLiquid.Exceptions;
 using DotLiquid.Util;
 
@@ -76,18 +77,18 @@ namespace DotLiquid.Tags
         /// </summary>
         /// <param name="context"></param>
         /// <param name="result"></param>
-        public override void Render(Context context, TextWriter result)
+        public override async Task RenderAsync(Context context, TextWriter result)
         {
-            context.Stack(() =>
+            await context.StackAsync(async () =>
             {
-                string key = context[_name].ToString();
+                string key = (await context.GetAsync(_name)).ToString();
                 var register = GetRegister<int>(context, "cycle");
                 var iteration = register.ContainsKey(key) ? register[key] : 0;
-                result.Write(context[_variables[iteration]].ToString());
+                await result.WriteAsync((await context.GetAsync(_variables[iteration])).ToString());
                 ++iteration;
                 if (iteration >= _variables.Length)
                     iteration = 0;
-                register[key] = iteration;
+                register[key] = iteration;                
             });
         }
     }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using DotLiquid.Exceptions;
 using DotLiquid.Util;
 
@@ -53,9 +54,9 @@ namespace DotLiquid.Tags.Html
         /// </summary>
         /// <param name="context"></param>
         /// <param name="result"></param>
-        public override void Render(Context context, TextWriter result)
+        public override async Task RenderAsync(Context context, TextWriter result)
         {
-            object coll = context[_collectionName];
+            object coll = await context.GetAsync(_collectionName);
 
             if (!(coll is IEnumerable))
                 return;
@@ -76,16 +77,16 @@ namespace DotLiquid.Tags.Html
             collection = collection.ToList();
             int length = collection.Count();
 
-            int cols = Convert.ToInt32(context[_attributes["cols"]]);
+            int cols = Convert.ToInt32(await context.GetAsync(_attributes["cols"]));
 
             int row = 1;
             int col = 0;
 
             result.WriteLine("<tr class=\"row1\">");
-            context.Stack(() => collection.EachWithIndex((item, index) =>
+            await context.StackAsync(async () => await collection.EachWithIndexAsync(async (item, index) =>
             {
-                context[_variableName] = item;
-                context["tablerowloop"] = Hash.FromAnonymousObject(new
+                context.Set(_variableName, item);
+                context.Set("tablerowloop", Hash.FromAnonymousObject(new
                 {
                     length = length,
                     index = index + 1,
@@ -98,13 +99,13 @@ namespace DotLiquid.Tags.Html
                     last = (index == length - 1),
                     col_first = (col == 0),
                     col_last = (col == cols - 1)
-                });
+                }));
 
                 ++col;
 
                 using (TextWriter temp = new StringWriter(result.FormatProvider))
                 {
-                    RenderAll(NodeList, context, temp);
+                    await RenderAllAsync(NodeList, context, temp);
                     result.Write("<td class=\"col{0}\">{1}</td>", col, temp.ToString());
                 }
 

@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using DotLiquid.NamingConventions;
 using DotLiquid.Util;
 
@@ -29,7 +30,15 @@ namespace DotLiquid
         private Dictionary<string, T> GetMemberDictionary<T>(IEnumerable<T> members, Func<T, bool> filterMemberCallback) where T : MemberInfo
         {
             return members.Where(filterMemberCallback)
-                          .ToDictionary(mi => Template.NamingConvention.GetMemberName(mi.Name), Template.NamingConvention.StringComparer);
+                .ToDictionary(CleanAsyncKeyName, Template.NamingConvention.StringComparer);
+        }
+
+        private static string CleanAsyncKeyName<T>(T methodInfo) where T : MemberInfo
+        {
+            if (methodInfo.Name.EndsWith("Async"))
+                return Template.NamingConvention.GetMemberName(methodInfo.Name.Substring(0, methodInfo.Name.Length - 5));
+            else
+                return Template.NamingConvention.GetMemberName(methodInfo.Name);
         }
 
         /// <summary>
@@ -68,17 +77,17 @@ namespace DotLiquid
         private static IEnumerable<MethodInfo> GetMethodsWithoutDuplicateNames(Type type, Func<MethodInfo, bool> predicate = null)
         {
             IList<MemberInfo> methods = predicate != null
-                                            ? type
-                                                  .GetRuntimeMethods()
-                                                  .Where(m => m.IsPublic && !m.IsStatic)
-                                                  .Where(predicate)
-                                                  .Cast<MemberInfo>()
-                                                  .ToList()
-                                            : type
-                                                  .GetRuntimeMethods()
-                                                  .Where(m => m.IsPublic && !m.IsStatic)
-                                                  .Cast<MemberInfo>()
-                                                  .ToList();
+                ? type
+                        .GetRuntimeMethods()
+                        .Where(m => m.IsPublic && !m.IsStatic)
+                        .Where(predicate)
+                        .Cast<MemberInfo>()
+                        .ToList()
+                : type
+                        .GetRuntimeMethods()
+                        .Where(m => m.IsPublic && !m.IsStatic)
+                        .Cast<MemberInfo>()
+                        .ToList();
 
             return GetMembersWithoutDuplicateNames(methods)
                 .Cast<MethodInfo>();
@@ -159,18 +168,11 @@ namespace DotLiquid
             }
         }
 
-        public Context Context { get; set; }
+        public Context Context { get; set; }        
 
-        /// <summary>
-        /// Just an alias for InvokeDrop - but the presence of the indexer
-        /// means that Liquid will access Drop objects as though they are
-        /// dictionaries or hashes.
-        /// </summary>
-        /// <param name="method"></param>
-        /// <returns></returns>
-        public virtual object this[object method]
+        public virtual Task<object> GetAsync(object method)
         {
-            get { return InvokeDrop(method); }
+            return InvokeDropAsync(method);
         }
 
 #region IIndexable
@@ -216,12 +218,13 @@ namespace DotLiquid
         ///     Called by liquid to invoke a drop
         /// </summary>
         /// <param name="name"></param>
-        public object InvokeDrop(object name)
+        public async Task<object> InvokeDropAsync(object name)
         {
             string method = (string)name;
 
             if (TypeResolution.CachedMethods.TryGetValue(method, out MethodInfo mi))
-                return mi.Invoke(GetObject(), null);
+                return await mi.InvokeAsync(GetObject());
+                
             if (TypeResolution.CachedProperties.TryGetValue(method, out PropertyInfo pi))
                 return pi.GetValue(GetObject(), null);
             return BeforeMethod(method);

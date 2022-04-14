@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using DotLiquid.Exceptions;
 using DotLiquid.Util;
 
@@ -61,7 +62,7 @@ namespace DotLiquid
             }
         }
 
-        public void Render(Context context, TextWriter result)
+        public async Task RenderAsync(Context context, TextWriter result)
         {
             // NOTE(David Burg): The decimal type default string serialization behavior adds non-significant trailing zeroes
             // to indicate the precision of the result.
@@ -75,7 +76,7 @@ namespace DotLiquid
                         ? ifo.ToString(format: null, formatProvider: formatProvider)
                         : (obj?.ToString() ?? "");
 
-            object output = RenderInternal(context);
+            object output = await RenderInternalAsync(context);
 
             if (output is ILiquidizable)
                 output = null;
@@ -102,20 +103,21 @@ namespace DotLiquid
             }
         }
 
-        private object RenderInternal(Context context)
+        private async Task<object> RenderInternalAsync(Context context)
         {
             if (Name == null)
-                return null;
+                return Task.FromResult((object)null);
 
-            object output = context[Name];
+            object output = await context.GetAsync(Name);
 
             foreach (var filter in Filters.ToList())
             {
-                List<object> filterArgs = filter.Arguments.Select(a => context[a]).ToList();
+                var filterArgsTasks = filter.Arguments.Select(async a => await context.GetAsync(a));
+                List<object> filterArgs = (await Task.WhenAll(filterArgsTasks)).ToList();
                 try
-                {
+                {                    
                     filterArgs.Insert(0, output);
-                    output = context.Invoke(filter.Name, filterArgs);
+                    output = await context.InvokeAsync(filter.Name, filterArgs);
                 }
                 catch (FilterNotFoundException ex)
                 {
@@ -136,9 +138,9 @@ namespace DotLiquid
         /// </summary>
         /// <param name="context"></param>
         /// <returns></returns>
-        internal object Render(Context context)
+        internal Task<object> RenderAsync(Context context)
         {
-            return RenderInternal(context);
+            return RenderInternalAsync(context);
         }
 
         public class Filter

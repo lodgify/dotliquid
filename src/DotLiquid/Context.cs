@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using DotLiquid.Exceptions;
 using DotLiquid.Util;
 
@@ -251,11 +252,11 @@ namespace DotLiquid
         /// <param name="method"></param>
         /// <param name="args"></param>
         /// <returns></returns>
-        public object Invoke(string method, List<object> args)
+        public async Task<object> InvokeAsync(string method, List<object> args)
         {
             if (Strainer.RespondTo(method))
             {
-                return Strainer.Invoke(method, args);
+                return await Strainer.InvokeAsync(method, args);
             }
 
             if (SyntaxCompatibilityLevel >= SyntaxCompatibility.DotLiquid22)
@@ -308,14 +309,14 @@ namespace DotLiquid
         /// context['var] #=> nil
         /// </summary>
         /// <param name="newScope"></param>
-        /// <param name="callback"></param>
+        /// <param name="callbackAsync"></param>
         /// <returns></returns>
-        public void Stack(Hash newScope, Action callback)
+        public async Task StackAsync(Hash newScope, Func<Task> callbackAsync)
         {
             Push(newScope);
             try
             {
-                callback();
+                await callbackAsync();
             }
             finally
             {
@@ -326,10 +327,10 @@ namespace DotLiquid
         /// <summary>
         /// Pushes a new hash on the stack, pops it at the end of the block
         /// </summary>
-        /// <param name="callback"></param>
-        public void Stack(Action callback)
+        /// <param name="callbackAsync"></param>
+        public Task StackAsync(Func<Task> callbackAsync)
         {
-            Stack(new Hash(), callback);
+            return StackAsync(new Hash(), callbackAsync);
         }
 
         /// <summary>
@@ -346,20 +347,25 @@ namespace DotLiquid
         /// <param name="key"></param>
         /// <param name="notifyNotFound">True to notify if variable is not found; Default true.</param>
         /// <returns></returns>
-        public object this[string key, bool notifyNotFound = true]
+        public Task<object> GetAsync(string key, bool notifyNotFound = true)
         {
-            get { return Resolve(key, notifyNotFound); }
-            set { Scopes[0][key] = value; }
+            return ResolveAsync(key, notifyNotFound);
         }
+
+        public void Set(string key, object value)
+        {
+            Scopes[0][key] = value;
+        }
+
 
         /// <summary>
         /// Checks if a variable key exists
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        public bool HasKey(string key)
+        public async Task<bool> HasKeyAsync(string key)
         {
-            return Resolve(key, false) != null;
+            return (await ResolveAsync(key, false) != null);
         }
 
         /// <summary>
@@ -375,7 +381,7 @@ namespace DotLiquid
         /// <param name="key"></param>
         /// <param name="notifyNotFound">True to notify if variable is not found; Default true.</param>
         /// <returns></returns>
-        private object Resolve(string key, bool notifyNotFound = true)
+        private async Task<object> ResolveAsync(string key, bool notifyNotFound = true)
         {
             switch (key)
             {
@@ -414,8 +420,8 @@ namespace DotLiquid
                         // Ranges.
                         match = RangeRegex.Match(key);
                         if (match.Success)
-                            return DotLiquid.Util.Range.Inclusive(Convert.ToInt32(Resolve(match.Groups[1].Value)),
-                                Convert.ToInt32(Resolve(match.Groups[2].Value)));
+                            return DotLiquid.Util.Range.Inclusive(Convert.ToInt32(await ResolveAsync(match.Groups[1].Value)),
+                                Convert.ToInt32(await ResolveAsync(match.Groups[2].Value)));
                         break;
                     default:
                         // Integer.
@@ -454,7 +460,7 @@ namespace DotLiquid
                         break;
                 }
             }
-            return Variable(key, notifyNotFound);
+            return await VariableAsync(key, notifyNotFound);
         }
 
         public IFormatProvider FormatProvider { get; private set; }
@@ -464,18 +470,18 @@ namespace DotLiquid
         /// the hierarchy
         /// </summary>
         /// <param name="key"></param>
-        /// <param name="variable"></param>
         /// <returns></returns>
-        private bool TryFindVariable(string key, out object variable)
+        private async Task<(bool, object)> TryFindVariableAsync(string key)
         {
             bool foundVariable = false;
             object foundValue = null;
+            object variable = null;
             Hash scope = Scopes.FirstOrDefault(s => s.ContainsKey(key));
             if (scope == null)
             {
                 foreach (Hash environment in Environments)
                 {
-                    foundVariable = TryEvaluateHashOrArrayLikeObject(environment, key, out foundValue);
+                    (foundVariable, foundValue) = await TryEvaluateHashOrArrayLikeObjectAsync(environment, key);
                     if (foundVariable)
                     {
                         scope = environment;
@@ -486,12 +492,12 @@ namespace DotLiquid
                 if (scope == null)
                 {
                     scope = Environments.LastOrDefault() ?? Scopes.Last();
-                    foundVariable = TryEvaluateHashOrArrayLikeObject(scope, key, out foundValue);
+                    (foundVariable, foundValue) = await TryEvaluateHashOrArrayLikeObjectAsync(scope, key);
                 }
             }
             else
             {
-                foundVariable = TryEvaluateHashOrArrayLikeObject(scope, key, out foundValue);
+                (foundVariable, foundValue) = await TryEvaluateHashOrArrayLikeObjectAsync(scope, key);
             }
 
             variable = Liquidize(foundValue);
@@ -499,7 +505,7 @@ namespace DotLiquid
             {
                 contextAwareVariable.Context = this;
             }
-            return foundVariable;
+            return (foundVariable, variable);
         }
 
         /// <summary>
@@ -514,11 +520,12 @@ namespace DotLiquid
         /// <param name="markup"></param>
         /// <param name="notifyNotFound"></param>
         /// <returns></returns>
-        private object Variable(string markup, bool notifyNotFound)
+        private async Task<object> VariableAsync(string markup, bool notifyNotFound)
         {
             using (var partsEnumerator = SyntaxCompatibilityLevel >= SyntaxCompatibility.DotLiquid22 ? Tokenizer.GetVariableEnumerator(markup) : R.Scan(markup, VariableParserRegex).GetEnumerator())
             {
-                if (TryGetVariable(partsEnumerator, out var variable))
+                var (success, variable) = await TryGetVariableAsync(partsEnumerator);
+                if (success)
                     return variable;
                 if (notifyNotFound)
                     Errors.Add(new VariableNotFoundException(string.Format(Liquid.ResourceManager.GetString("VariableNotFoundException"), markup)));
@@ -526,18 +533,31 @@ namespace DotLiquid
             }
         }
 
-        private bool TryGetVariable(IEnumerator<string> partsEnumerator, out object variable)
+        private async Task<(bool, object)> TryGetVariableAsync(IEnumerator<string> partsEnumerator)
         {
+            object variable = null;
+
             // first item in list, if any
             string firstPart = partsEnumerator.MoveNext() ? partsEnumerator.Current : null;
             if (firstPart != null && firstPart[0] == '[')
-                firstPart = Resolve(firstPart.Substring(1, firstPart.Length - 2)).ToString();
+                firstPart = (await ResolveAsync(firstPart.Substring(1, firstPart.Length - 2))).ToString();
 
             object @object;
-            if (firstPart == null || !TryFindVariable(firstPart, out @object))
+            bool variableFound = false;
+
+            if (firstPart == null)
             {
                 variable = null;
-                return false;
+                return (false, variable);
+            }
+            else
+            {
+                (variableFound, @object) = await TryFindVariableAsync(firstPart);
+                if (!variableFound)
+                {
+                    variable = null;
+                    return (false, variable);
+                }
             }
 
             // try to resolve the rest of the parts (starting from the second item in the list)
@@ -548,7 +568,7 @@ namespace DotLiquid
 
                 object part = forEachPart;
                 if (partResolved)
-                    part = Resolve(forEachPart.Substring(1, forEachPart.Length - 2));
+                    part = await ResolveAsync(forEachPart.Substring(1, forEachPart.Length - 2));              
 
                 // If object is a KeyValuePair and the required part is either 0 or 'Key', return the Key.
                 var isKeyValuePair = IsKeyValuePair(@object);
@@ -563,38 +583,42 @@ namespace DotLiquid
                 {
                     @object = Liquidize(@object.GetPropertyValue("Value"));
                 }
-                // If object is a hash- or array-like object we look for the
-                // presence of the key and if its available we return it
-                else if (TryEvaluateHashOrArrayLikeObject(@object, part, out var hashObj))
-                {
-                    // If its a proc we will replace the entry with the proc
-                    @object = Liquidize(hashObj);
-                }
-                // Some special cases. If the part wasn't in square brackets and
-                // no key with the same name was found we interpret first/last/size
-                // as commands and call them on the current object
-                else if (!partResolved && (@object is IEnumerable enumerable) && (Template.NamingConvention.OperatorEquals(part as string, "size") || Template.NamingConvention.OperatorEquals(part as string, "first") || Template.NamingConvention.OperatorEquals(part as string, "last")))
-                {
-                    var castCollection = enumerable.Cast<object>();
-                    if (Template.NamingConvention.OperatorEquals(part as string, "size"))
-                    {
-                        @object = castCollection.Count();
-                    }
-                    else if (Template.NamingConvention.OperatorEquals(part as string, "first"))
-                    {
-                        @object = Liquidize(castCollection.FirstOrDefault());
-                    }
-                    else
-                    {
-                        @object = Liquidize(castCollection.LastOrDefault());
-                    }
-                }
-                // No key was present with the desired value and it wasn't one of the directly supported
-                // keywords either. The only thing we got left is to return nil
                 else
                 {
-                    variable = null;
-                    return false;
+                    // If object is a hash- or array-like object we look for the
+                    // presence of the key and if its available we return it
+                    var (tryEvaluateHashOrArraySuccess, hashObj) = await TryEvaluateHashOrArrayLikeObjectAsync(@object, part);
+                    if (tryEvaluateHashOrArraySuccess)
+                    {
+                        // If its a proc we will replace the entry with the proc
+                        @object = Liquidize(hashObj);
+                    }
+                    // Some special cases. If the part wasn't in square brackets and
+                    // no key with the same name was found we interpret first/last/size
+                    // as commands and call them on the current object
+                    else if (!partResolved && (@object is IEnumerable enumerable) && (Template.NamingConvention.OperatorEquals(part as string, "size") || Template.NamingConvention.OperatorEquals(part as string, "first") || Template.NamingConvention.OperatorEquals(part as string, "last")))
+                    {
+                        var castCollection = enumerable.Cast<object>();
+                        if (Template.NamingConvention.OperatorEquals(part as string, "size"))
+                        {
+                            @object = castCollection.Count();
+                        }
+                        else if (Template.NamingConvention.OperatorEquals(part as string, "first"))
+                        {
+                            @object = Liquidize(castCollection.FirstOrDefault());
+                        }
+                        else
+                        {
+                            @object = Liquidize(castCollection.LastOrDefault());
+                        }
+                    }
+                    // No key was present with the desired value and it wasn't one of the directly supported
+                    // keywords either. The only thing we got left is to return nil
+                    else
+                    {
+                        variable = null;
+                        return (false, variable);
+                    }
                 }
 
                 // If we are dealing with a drop here we have to
@@ -604,15 +628,15 @@ namespace DotLiquid
                 }
             }
             variable = @object;
-            return true;
+            return (true, variable);
         }
 
-        private bool TryEvaluateHashOrArrayLikeObject(object obj, object key, out object value)
+        private async Task<(bool, object)> TryEvaluateHashOrArrayLikeObjectAsync(object obj, object key)
         {
-            value = null;
+            object value = null;
 
             if (obj == null)
-                return false;
+                return (false, value);
 
             if ((obj is IDictionary dictionaryObj && dictionaryObj.Contains(key)))
                 value = dictionaryObj[key];
@@ -629,10 +653,10 @@ namespace DotLiquid
                 value = obj.GetType().GetRuntimeProperty((string)key).GetValue(obj, null);
 
             else if ((obj is IIndexable indexableObj) && indexableObj.ContainsKey(key))
-                value = indexableObj[key];
+                value = await indexableObj.GetAsync(key);
 
             else
-                return false;
+                return (false, value);
 
             if (value is Proc procValue)
             {
@@ -656,7 +680,7 @@ namespace DotLiquid
                 value = newValue;
             }
 
-            return true;
+            return (true, value);
         }
 
         private static object Liquidize(object obj)
@@ -675,11 +699,7 @@ namespace DotLiquid
             }
 
             var valueType = obj.GetType();
-#if NETSTANDARD1_3
             if (valueType.GetTypeInfo().IsPrimitive)
-#else
-            if (valueType.IsPrimitive)
-#endif
             {
                 return obj;
             }
@@ -714,11 +734,7 @@ namespace DotLiquid
             if (obj != null)
             {
                 Type valueType = obj.GetType();
-#if NETSTANDARD1_3
                 if (valueType.GetTypeInfo().IsGenericType)
-#else
-                if (valueType.IsGenericType)
-#endif
                 {
                     Type baseType = valueType.GetGenericTypeDefinition();
                     if (baseType == typeof(KeyValuePair<,>))

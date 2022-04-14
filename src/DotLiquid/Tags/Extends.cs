@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using DotLiquid.Exceptions;
 using DotLiquid.FileSystems;
 using DotLiquid.Util;
@@ -101,7 +102,7 @@ namespace DotLiquid.Tags
         {
         }
 
-        public override void Render(Context context, TextWriter result)
+        public override async Task RenderAsync(Context context, TextWriter result)
         {
             // Get the template or template content and then either copy it (since it will be modified) or parse it
             IFileSystem fileSystem = context.Registers["file_system"] as IFileSystem ?? Template.FileSystem;
@@ -109,11 +110,11 @@ namespace DotLiquid.Tags
             Template template = null;
             if (templateFileSystem != null)
             {
-                template = templateFileSystem.GetTemplate(context, _templateName);
+                template = await templateFileSystem.GetTemplateAsync(context, _templateName);
             }
             if (template == null)
             {
-                string source = fileSystem.ReadTemplateFile(context, _templateName);
+                string source = await fileSystem.ReadTemplateFileAsync(context, _templateName);
                 template = Template.Parse(source);
             }
 
@@ -121,10 +122,10 @@ namespace DotLiquid.Tags
             List<Block> orphanedBlocks = ((List<Block>)context.Scopes[0]["extends"]) ?? new List<Block>();
             BlockRenderState blockState = BlockRenderState.Find(context) ?? new BlockRenderState();
 
-            context.Stack(() =>
+            await context.StackAsync(async () =>
             {
-                context["blockstate"] = blockState;         // Set or copy the block state down to this scope
-                context["extends"] = new List<Block>();     // Holds Blocks that were not found in the parent
+                context.Set("blockstate", blockState);         // Set or copy the block state down to this scope
+                context.Set("extends", new List<Block>());     // Holds Blocks that were not found in the parent
                 foreach (Block block in NodeList.OfType<Block>().Concat(orphanedBlocks))
                 {
                     Block pb = parentBlocks.Find(b => b.BlockName == block.BlockName);
@@ -141,7 +142,7 @@ namespace DotLiquid.Tags
                         ((List<Block>)context.Scopes[0]["extends"]).Add(block);
                     }
                 }
-                template.Render(result, RenderParameters.FromContext(context, result.FormatProvider));
+                await template.RenderAsync(result, RenderParameters.FromContext(context, result.FormatProvider));
             });
         }
 

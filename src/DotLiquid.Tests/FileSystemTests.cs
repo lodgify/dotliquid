@@ -13,7 +13,7 @@ namespace DotLiquid.Tests
         [Test]
         public void TestDefault()
         {
-            Assert.Throws<FileSystemException>(() => new BlankFileSystem().ReadTemplateFile(new Context(CultureInfo.InvariantCulture), "dummy"));
+            Assert.Throws<FileSystemException>(() => new BlankFileSystem().ReadTemplateFileAsync(new Context(CultureInfo.InvariantCulture), "dummy"));
         }
         
 

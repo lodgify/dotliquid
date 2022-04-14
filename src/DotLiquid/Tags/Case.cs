@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using DotLiquid.Exceptions;
 using DotLiquid.Util;
 
@@ -44,27 +45,27 @@ namespace DotLiquid.Tags
             }
         }
 
-        public override void Render(Context context, TextWriter result)
+        public override async Task RenderAsync(Context context, TextWriter result)
         {
-            context.Stack(() =>
+            await context.StackAsync(async () =>
             {
                 bool executeElseBlock = true;
-                _blocks.ForEach(block =>
+                foreach (var block in _blocks)
                 {
                     if (block.IsElse)
                     {
                         if (executeElseBlock)
                         {
-                            RenderAll(block.Attachment, context, result);
+                            await RenderAllAsync(block.Attachment, context, result);
                             return;
                         }
                     }
-                    else if (block.Evaluate(context, result.FormatProvider))
+                    else if (await block.EvaluateAsync(context, result.FormatProvider))
                     {
                         executeElseBlock = false;
-                        RenderAll(block.Attachment, context, result);
+                        await RenderAllAsync(block.Attachment, context, result);
                     }
-                });
+                }               
             });
         }
 

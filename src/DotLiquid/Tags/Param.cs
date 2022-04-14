@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using DotLiquid.Exceptions;
 using DotLiquid.Util;
 
@@ -61,10 +62,10 @@ namespace DotLiquid.Tags
         /// </summary>
         /// <exception cref="SyntaxException">For unknown parameters or invalid options for a known parameter.</exception>
         /// <exception cref="FilterNotFoundException">If a non-safelisted filter class is encountered.</exception>
-        public override void Render(Context context, TextWriter _)
+        public override async Task RenderAsync(Context context, TextWriter _)
         {
             // Apply the parameter
-            param(context, context[this.paramValue].ToString());
+            param(context, (await context.GetAsync(this.paramValue)).ToString());
         }
 
         private static void SetDateFormat(Context context, string value)

@@ -1,5 +1,6 @@
 using DotLiquid.Exceptions;
 using NUnit.Framework;
+using System.Threading.Tasks;
 
 namespace DotLiquid.Tests
 {
@@ -7,11 +8,11 @@ namespace DotLiquid.Tests
     public class ParsingQuirksTests
     {
         [Test]
-        public void TestErrorWithCss()
+        public async Task TestErrorWithCss()
         {
             const string text = " div { font-weight: bold; } ";
             Template template = Template.Parse(text);
-            Assert.AreEqual(text, template.Render());
+            Assert.AreEqual(text, await template.RenderAsync());
             Assert.AreEqual(1, template.Root.NodeList.Count);
             Assert.IsInstanceOf<string>(template.Root.NodeList[0]);
         }
@@ -46,24 +47,24 @@ namespace DotLiquid.Tests
         }
 
         [Test]
-        public void TestMeaninglessParens()
+        public async Task TestMeaninglessParens()
         {
             Hash assigns = Hash.FromAnonymousObject(new { b = "bar", c = "baz" });
-            Helper.AssertTemplateResult(" YES ", "{% if a == 'foo' or (b == 'bar' and c == 'baz') or false %} YES {% endif %}", assigns);
+            await Helper.AssertTemplateResultAsync(" YES ", "{% if a == 'foo' or (b == 'bar' and c == 'baz') or false %} YES {% endif %}", assigns);
         }
 
         [Test]
-        public void TestUnexpectedCharactersSilentlyEatLogic()
+        public async Task TestUnexpectedCharactersSilentlyEatLogic()
         {
-            Helper.AssertTemplateResult(" YES ", "{% if true && false %} YES {% endif %}");
-            Helper.AssertTemplateResult("", "{% if false || true %} YES {% endif %}");
+            await Helper.AssertTemplateResultAsync(" YES ", "{% if true && false %} YES {% endif %}");
+            await Helper.AssertTemplateResultAsync("", "{% if false || true %} YES {% endif %}");
         }
 
         [Test]
-        public void TestLiquidTagsInQuotes()
+        public async Task TestLiquidTagsInQuotes()
         {
-            Helper.AssertTemplateResult("{{ {% %} }}", "{{ '{{ {% %} }}' }}");
-            Helper.AssertTemplateResult("{{ {% %} }}", "{% assign x = '{{ {% %} }}' %}{{x}}");
+            await Helper.AssertTemplateResultAsync("{{ {% %} }}", "{{ '{{ {% %} }}' }}");
+            await Helper.AssertTemplateResultAsync("{{ {% %} }}", "{% assign x = '{{ {% %} }}' %}{{x}}");
         }
 
         [TestCase(".")]
@@ -75,7 +76,7 @@ namespace DotLiquid.Tests
         public void TestVariableNotTerminatedFromInvalidVariableName(string variableName)
         {
             var template = Template.Parse("{{ " + variableName + " }}");
-            SyntaxException ex = Assert.Throws<SyntaxException>(() => template.Render(new RenderParameters(System.Globalization.CultureInfo.InvariantCulture)
+            SyntaxException ex = Assert.ThrowsAsync<SyntaxException>(async () => await template.RenderAsync(new RenderParameters(System.Globalization.CultureInfo.InvariantCulture)
             {
                 LocalVariables = Hash.FromAnonymousObject(new { x = "" }),
                 ErrorsOutputMode = ErrorsOutputMode.Rethrow,
@@ -86,7 +87,7 @@ namespace DotLiquid.Tests
                 actual: ex.Message);
 
             template = Template.Parse("{{ x[" + variableName + "] }}");
-            ex = Assert.Throws<SyntaxException>(() => template.Render(new RenderParameters(System.Globalization.CultureInfo.InvariantCulture)
+            ex = Assert.ThrowsAsync<SyntaxException>(async () => await template.RenderAsync(new RenderParameters(System.Globalization.CultureInfo.InvariantCulture)
             {
                 LocalVariables = Hash.FromAnonymousObject(new { x = new { x = "" } }),
                 ErrorsOutputMode = ErrorsOutputMode.Rethrow,
@@ -101,7 +102,7 @@ namespace DotLiquid.Tests
         public void TestNestedVariableNotTerminated()
         {
             var template = Template.Parse("{{ x[[] }}");
-            var ex = Assert.Throws<SyntaxException>(() => template.Render(new RenderParameters(System.Globalization.CultureInfo.InvariantCulture)
+            var ex = Assert.ThrowsAsync<SyntaxException>(async () => await template.RenderAsync(new RenderParameters(System.Globalization.CultureInfo.InvariantCulture)
             {
                 LocalVariables = Hash.FromAnonymousObject(new { x = new { x = "" } }),
                 ErrorsOutputMode = ErrorsOutputMode.Rethrow,
@@ -124,11 +125,11 @@ namespace DotLiquid.Tests
         }
 
         [Test]
-        public void TestShortHandSyntaxIsIgnored()
+        public async Task TestShortHandSyntaxIsIgnored()
         {
             // These tests are based on actual handling on Ruby Liquid, not indicative of wanted behavior. Behavior for legacy dotliquid parser is in TestEmptyLiteral
-            Assert.AreEqual("}", Template.Parse("{{{}}}", SyntaxCompatibility.DotLiquid22).Render());
-            Assert.AreEqual("{##}", Template.Parse("{##}", SyntaxCompatibility.DotLiquid22).Render());
+            Assert.AreEqual("}", await Template.Parse("{{{}}}", SyntaxCompatibility.DotLiquid22).RenderAsync());
+            Assert.AreEqual("{##}", await Template.Parse("{##}", SyntaxCompatibility.DotLiquid22).RenderAsync());
         }
     }
 }

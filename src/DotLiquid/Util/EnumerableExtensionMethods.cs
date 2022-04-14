@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace DotLiquid.Util
 {
@@ -24,12 +25,12 @@ namespace DotLiquid.Util
             }
         }
 
-        public static void EachWithIndex(this IEnumerable<object> array, Action<object, int> callback)
+        public static async Task EachWithIndexAsync(this IEnumerable<object> array, Func<object, int, Task> callbackAsync)
         {
             int index = 0;
             foreach (object item in array)
             {
-                callback(item, index);
+                await callbackAsync(item, index);
                 ++index;
             }
         }

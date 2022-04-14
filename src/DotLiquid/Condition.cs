@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using DotLiquid.Util;
 
 namespace DotLiquid
@@ -74,17 +75,17 @@ namespace DotLiquid
         {
         }
 
-        public virtual bool Evaluate(Context context, IFormatProvider formatProvider)
+        public virtual async Task<bool> EvaluateAsync(Context context, IFormatProvider formatProvider)
         {
             context = context ?? new Context(formatProvider);
-            bool result = InterpretCondition(Left, Right, Operator, context);
+            bool result = await InterpretConditionAsync(Left, Right, Operator, context);
 
             switch (_childRelation)
             {
                 case "or":
-                    return result || _childCondition.Evaluate(context, formatProvider);
+                    return result || await _childCondition.EvaluateAsync(context, formatProvider);
                 case "and":
-                    return result && _childCondition.Evaluate(context, formatProvider);
+                    return result && await _childCondition.EvaluateAsync(context, formatProvider);
                 default:
                     return result;
             }
@@ -128,19 +129,19 @@ namespace DotLiquid
             return left.SafeTypeInsensitiveEqual(right);
         }
 
-        private static bool InterpretCondition(string left, string right, string op, Context context)
+        private static async Task<bool> InterpretConditionAsync(string left, string right, string op, Context context)
         {
             // If the operator is empty this means that the decision statement is just
             // a single variable. We can just poll this variable from the context and
             // return this as the result.
             if (string.IsNullOrEmpty(op))
             {
-                object result = context[left, false];
+                object result = await context.GetAsync(left, false);
                 return (result != null && (!(result is bool) || (bool) result));
             }
 
-            object leftObject = context[left];
-            object rightObject = context[right];
+            object leftObject = await context.GetAsync(left);
+            object rightObject = await context.GetAsync(right);
 
             var opKey = Operators.Keys.FirstOrDefault(opk => opk.Equals(op)
                                                                 || opk.ToLowerInvariant().Equals(op)
@@ -162,9 +163,9 @@ namespace DotLiquid
             get { return true; }
         }
 
-        public override bool Evaluate(Context context, IFormatProvider formatProvider)
+        public override Task<bool> EvaluateAsync(Context context, IFormatProvider formatProvider)
         {
-            return true;
+            return Task.FromResult(true);
         }
     }
 

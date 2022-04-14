@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using NUnit.Framework;
 
 namespace DotLiquid.Tests.Ns1
@@ -166,7 +167,7 @@ namespace DotLiquid.Tests
         }
 
         [Test]
-        public void TestMergeNestedDictionaries()
+        public async Task TestMergeNestedDictionaries()
         {
             var hash = Hash.FromDictionary(new Dictionary<string, object> {{
                     "People",
@@ -177,13 +178,13 @@ namespace DotLiquid.Tests
                     }});
 
             // Test using a for loop
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "JaneMike",
                 template: "{% for item in People %}{{ item.First }}{%endfor%}",
                 localVariables: hash);
 
             // Test using direct variable access
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "Jane Doe",
                 template: "{{ People.ID1.First }} {{ People.ID2.Last }}",
                 localVariables: hash);

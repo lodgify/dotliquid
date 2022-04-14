@@ -1,17 +1,18 @@
 using System.IO;
+using System.Threading.Tasks;
 
 namespace DotLiquid.Tags
 {
     public class IfChanged : DotLiquid.Block
     {
-        public override void Render(Context context, TextWriter result)
+        public override async Task RenderAsync(Context context, TextWriter result)
         {
-            context.Stack(() =>
+            await context.StackAsync(async () =>
             {
                 string tempString;
                 using (TextWriter temp = new StringWriter(result.FormatProvider))
                 {
-                    RenderAll(NodeList, context, temp);
+                    await RenderAllAsync(NodeList, context, temp);
                     tempString = temp.ToString();
                 }
 

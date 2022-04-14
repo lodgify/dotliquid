@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using DotLiquid.FileSystems;
 using DotLiquid.Util;
 using DotLiquid.NamingConventions;
+using System.Threading.Tasks;
 
 namespace DotLiquid
 {
@@ -113,13 +114,9 @@ namespace DotLiquid
         {
             Tags.TryGetValue(name, out Tuple<ITagFactory, Type> result);
             return typeof(RawBlock)
-#if NETSTANDARD1_3
                 .GetTypeInfo()
-#endif
                 .IsAssignableFrom(result?.Item2
-#if NETSTANDARD1_3
                     ?.GetTypeInfo()
-#endif
                 );
         }
 
@@ -367,10 +364,10 @@ namespace DotLiquid
         /// Renders the template using default parameters and the current culture and returns a string containing the result.
         /// </summary>
         /// <returns>The rendering result as string.</returns>
-        public string Render(IFormatProvider formatProvider = null)
+        public Task<string> RenderAsync(IFormatProvider formatProvider = null)
         {
             formatProvider = formatProvider ?? CultureInfo.CurrentCulture;
-            return Render(new RenderParameters(formatProvider));
+            return RenderAsync(new RenderParameters(formatProvider));
         }
 
         /// <summary>
@@ -379,11 +376,11 @@ namespace DotLiquid
         /// <param name="localVariables">Local variables.</param>
         /// <param name="formatProvider">String formatting provider.</param>
         /// <returns>The rendering result as string.</returns>
-        public string Render(Hash localVariables, IFormatProvider formatProvider = null)
+        public Task<string> RenderAsync(Hash localVariables, IFormatProvider formatProvider = null)
         {
             using (var writer = new StringWriter(formatProvider ?? CultureInfo.CurrentCulture))
             {
-                return this.Render(
+                return this.RenderAsync(
                     writer: writer,
                     parameters: new RenderParameters(writer.FormatProvider)
                     {
@@ -398,11 +395,11 @@ namespace DotLiquid
         /// </summary>
         /// <param name="parameters">Render parameters.</param>
         /// <returns>The rendering result as string.</returns>
-        public string Render(RenderParameters parameters)
+        public Task<string> RenderAsync(RenderParameters parameters)
         {
             using (var writer = new StringWriter(parameters.FormatProvider))
             {
-                return this.Render(writer, parameters);
+                return this.RenderAsync(writer, parameters);
             }
         }
 
@@ -412,14 +409,14 @@ namespace DotLiquid
         /// <param name="writer">Render parameters.</param>
         /// <param name="parameters"></param>
         /// <returns>The rendering result as string.</returns>
-        public string Render(TextWriter writer, RenderParameters parameters)
+        public async Task<string> RenderAsync(TextWriter writer, RenderParameters parameters)
         {
             if (writer == null)
                 throw new ArgumentNullException(paramName: nameof(writer));
             if (parameters == null)
                 throw new ArgumentNullException(paramName: nameof(parameters));
 
-            this.RenderInternal(writer, parameters);
+            await this.RenderInternalAsync(writer, parameters);
             return writer.ToString();
         }
 
@@ -436,12 +433,12 @@ namespace DotLiquid
         /// </summary>
         /// <param name="stream">The stream to render into.</param>
         /// <param name="parameters">The render parameters.</param>
-        public void Render(Stream stream, RenderParameters parameters)
+        public async Task RenderAsync(Stream stream, RenderParameters parameters)
         {
             // Can't dispose this new StreamWriter, because it would close the
             // passed-in stream, which isn't up to us.
             StreamWriter streamWriter = new StreamWriterWithFormatProvider(stream, parameters.FormatProvider);
-            RenderInternal(streamWriter, parameters);
+            await RenderInternalAsync(streamWriter, parameters);
             streamWriter.Flush();
         }
 
@@ -457,7 +454,7 @@ namespace DotLiquid
         /// * <tt>registers</tt> : hash with register variables. Those can be accessed from
         /// filters and tags and might be useful to integrate liquid more with its host application
         /// </summary>
-        private void RenderInternal(TextWriter result, RenderParameters parameters)
+        private async Task RenderInternalAsync(TextWriter result, RenderParameters parameters)
         {
             if (Root == null)
                 return;
@@ -476,7 +473,7 @@ namespace DotLiquid
             try
             {
                 // Render the nodelist.
-                Root.Render(context, result);
+                await Root.RenderAsync(context, result);
             }
             finally
             {
