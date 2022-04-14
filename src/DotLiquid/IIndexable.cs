@@ -1,8 +1,10 @@
+using System.Threading.Tasks;
+
 namespace DotLiquid
 {
     public interface IIndexable
     {
-        object this[object key] { get; }
+        Task<object> GetAsync(object key);
         bool ContainsKey(object key);
     }
 }

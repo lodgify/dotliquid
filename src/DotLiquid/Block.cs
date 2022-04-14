@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using DotLiquid.Exceptions;
 using DotLiquid.Util;
 
@@ -147,9 +148,9 @@ namespace DotLiquid
         /// </summary>
         /// <param name="context"></param>
         /// <param name="result"></param>
-        public override void Render(Context context, TextWriter result)
+        public override Task RenderAsync(Context context, TextWriter result)
         {
-            RenderAll(NodeList, context, result);
+            return RenderAllAsync(NodeList, context, result);
         }
 
         /// <summary>
@@ -166,7 +167,7 @@ namespace DotLiquid
         /// <param name="list"></param>
         /// <param name="context"></param>
         /// <param name="result"></param>
-        protected void RenderAll(List<object> list, Context context, TextWriter result)
+        protected async Task RenderAllAsync(List<object> list, Context context, TextWriter result)
         {
             foreach (var token in list)
             {
@@ -176,7 +177,7 @@ namespace DotLiquid
                 {
                     if (token is IRenderable renderableToken)
                     {
-                        renderableToken.Render(context, result);
+                        await renderableToken.RenderAsync(context, result);
                     }
                     else
                     {

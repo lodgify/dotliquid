@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Threading;
 using DotLiquid;
 using DotLiquid.Util;
+using System.Threading.Tasks;
 
 namespace DotLiquid
 {
@@ -22,7 +23,6 @@ namespace DotLiquid
         private static readonly Lazy<Regex> StripHtmlBlocks = new Lazy<Regex>(() => R.C(@"<script.*?</script>|<!--.*?-->|<style.*?</style>", RegexOptions.Singleline | RegexOptions.IgnoreCase), LazyThreadSafetyMode.ExecutionAndPublication);
         private static readonly Lazy<Regex> StripHtmlTags = new Lazy<Regex>(() => R.C(@"<.*?>", RegexOptions.Singleline), LazyThreadSafetyMode.ExecutionAndPublication);
 
-#if NETSTANDARD1_3
         private class StringAwareObjectComparer : IComparer
         {
             private readonly StringComparer _stringComparer;
@@ -47,7 +47,6 @@ namespace DotLiquid
                 return Comparer<object>.Default.Compare(x, y);
             }
         }
-#endif
 
         /// <summary>
         /// Return the size of an array or of an string
@@ -442,11 +441,8 @@ namespace DotLiquid
             if (!ary.Any())
                 return ary;
 
-#if NETSTANDARD1_3
+
             var comparer = new StringAwareObjectComparer(stringComparer);
-#else
-            var comparer = stringComparer;
-#endif 
 
             if (string.IsNullOrEmpty(property))
             {
@@ -469,7 +465,7 @@ namespace DotLiquid
         /// </summary>
         /// <param name="enumerableInput">The enumerable.</param>
         /// <param name="property">The property to map.</param>
-        public static IEnumerable Map(IEnumerable enumerableInput, string property)
+        public static async Task<IEnumerable> MapAsync(IEnumerable enumerableInput, string property)
         {
             if (enumerableInput == null)
                 return null;
@@ -487,8 +483,8 @@ namespace DotLiquid
                 && ((IDictionary)listedInput.First()).Contains(key: property))
                 return listedInput.Select(element => ((IDictionary)element)[property]);
 
-            return listedInput
-                .Select(selector: element =>
+            var selectedInputTasks = listedInput
+                .Select(selector: async element =>
                 {
                     if (element == null)
                         return null;
@@ -517,8 +513,10 @@ namespace DotLiquid
                         }
                     }
 
-                    return (indexable?.ContainsKey(property) ?? false) ? indexable[property] : null;
+                    return (indexable?.ContainsKey(property) ?? false) ? await indexable.GetAsync(property) : null;
                 });
+
+            return await Task.WhenAll(selectedInputTasks);
         }
 
         /// <summary>

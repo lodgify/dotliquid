@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using DotLiquid.Exceptions;
 using Newtonsoft.Json;
 using NUnit.Framework;
@@ -25,9 +26,9 @@ namespace DotLiquid.Tests
 
         private static class TestContextFilters
         {
-            public static string Hi(Context context, string output)
+            public static async Task<string> HiAsync(Context context, string output)
             {
-                return output + " hi from " + context["name"] + "!";
+                return output + " hi from " + (await context.GetAsync("name")) + "!";
             }
         }
 
@@ -70,9 +71,9 @@ namespace DotLiquid.Tests
 
         private class ContextSensitiveDrop : Drop
         {
-            public object Test()
+            public Task<object> TestAsync()
             {
-                return Context["test"];
+                return Context.GetAsync("test");
             }
         }
 
@@ -139,8 +140,12 @@ namespace DotLiquid.Tests
         private class IndexableLiquidizable : IIndexable, ILiquidizable
         {
             private const string theKey = "thekey";
-
-            public object this[object key] => key as string == theKey ? new LiquidizableList() : null;
+            
+            public async Task<object> GetAsync(object key)
+            {
+                var result = key as string == theKey ? new LiquidizableList() : null;
+                return await Task.FromResult(result);
+            }
 
             public bool ContainsKey(object key)
             {
@@ -184,80 +189,80 @@ namespace DotLiquid.Tests
         }
 
         [Test]
-        public void TestVariables()
+        public async Task TestVariables()
         {
-            _context["string"] = "string";
-            Assert.AreEqual("string", _context["string"]);
+            _context.Set("string", "string");
+            Assert.AreEqual("string", await _context.GetAsync("string"));
 
-            _context["EscapedCharacter"] = "EscapedCharacter\"";
-            Assert.AreEqual("EscapedCharacter\"", _context["EscapedCharacter"]);
+            _context.Set("EscapedCharacter", "EscapedCharacter\"");
+            Assert.AreEqual("EscapedCharacter\"", await _context.GetAsync("EscapedCharacter"));
 
-            _context["num"] = 5;
-            Assert.AreEqual(5, _context["num"]);
+            _context.Set("num", 5);
+            Assert.AreEqual(5, await _context.GetAsync("num"));
 
-            _context["decimal"] = 5m;
-            Assert.AreEqual(5m, _context["decimal"]);
+            _context.Set("decimal", 5m);
+            Assert.AreEqual(5m, await _context.GetAsync("decimal"));
 
-            _context["float"] = 5.0f;
-            Assert.AreEqual(5.0f, _context["float"]);
+            _context.Set("float", 5.0f);
+            Assert.AreEqual(5.0f, await _context.GetAsync("float"));
 
-            _context["double"] = 5.0;
-            Assert.AreEqual(5.0, _context["double"]);
+            _context.Set("double", 5.0);
+            Assert.AreEqual(5.0, await _context.GetAsync("double"));
 
-            _context["time"] = TimeSpan.FromDays(1);
-            Assert.AreEqual(TimeSpan.FromDays(1), _context["time"]);
+            _context.Set("time", TimeSpan.FromDays(1));
+            Assert.AreEqual(TimeSpan.FromDays(1), await _context.GetAsync("time"));
 
-            _context["date"] = DateTime.Today;
-            Assert.AreEqual(DateTime.Today, _context["date"]);
+            _context.Set("date", DateTime.Today);
+            Assert.AreEqual(DateTime.Today, await _context.GetAsync("date"));
 
             DateTime now = DateTime.Now;
-            _context["datetime"] = now;
-            Assert.AreEqual(now, _context["datetime"]);
+            _context.Set("datetime", now);
+            Assert.AreEqual(now, await _context.GetAsync("datetime"));
 
             DateTimeOffset offset = new DateTimeOffset(2013, 9, 10, 0, 10, 32, new TimeSpan(1, 0, 0));
-            _context["datetimeoffset"] = offset;
-            Assert.AreEqual(offset, _context["datetimeoffset"]);
+            _context.Set("datetimeoffset", offset);
+            Assert.AreEqual(offset, await _context.GetAsync("datetimeoffset"));
 
             Guid guid = Guid.NewGuid();
-            _context["guid"] = guid;
-            Assert.AreEqual(guid, _context["guid"]);
+            _context.Set("guid", guid);
+            Assert.AreEqual(guid, await _context.GetAsync("guid"));
 
-            _context["bool"] = true;
-            Assert.AreEqual(true, _context["bool"]);
+            _context.Set("bool", true);
+            Assert.AreEqual(true, await _context.GetAsync("bool"));
 
-            _context["bool"] = false;
-            Assert.AreEqual(false, _context["bool"]);
+            _context.Set("bool", false);
+            Assert.AreEqual(false, await _context.GetAsync("bool"));
 
-            _context["nil"] = null;
-            Assert.AreEqual(null, _context["nil"]);
-            Assert.AreEqual(null, _context["nil"]);
+            _context.Set("nil", null);
+            Assert.AreEqual(null, await _context.GetAsync("nil"));
+            Assert.AreEqual(null, await _context.GetAsync("nil"));
         }
 
         private enum TestEnum { Yes, No }
 
         [Test]
-        public void TestGetVariable_Enum()
+        public async Task TestGetVariable_Enum()
         {
-            _context["yes"] = TestEnum.Yes;
-            _context["no"] = TestEnum.No;
-            _context["not_enum"] = TestEnum.Yes.ToString();
+            _context.Set("yes", TestEnum.Yes);
+            _context.Set("no", TestEnum.No);
+            _context.Set("not_enum", TestEnum.Yes.ToString());
 
-            Assert.AreEqual(TestEnum.Yes, _context["yes"]);
-            Assert.AreEqual(TestEnum.No, _context["no"]);
-            Assert.AreNotEqual(TestEnum.Yes, _context["not_enum"]);
+            Assert.AreEqual(TestEnum.Yes, await _context.GetAsync("yes"));
+            Assert.AreEqual(TestEnum.No, await _context.GetAsync("no"));
+            Assert.AreNotEqual(TestEnum.Yes, await _context.GetAsync("not_enum"));
         }
 
         [Test]
-        public void TestVariablesNotExisting()
+        public async Task TestVariablesNotExisting()
         {
-            Assert.AreEqual(null, _context["does_not_exist"]);
+            Assert.AreEqual(null, await _context.GetAsync("does_not_exist"));
         }
 
         [Test]
-        public void TestVariableNotFoundErrors()
+        public async Task TestVariableNotFoundErrors()
         {
             Template template = Template.Parse("{{ does_not_exist }}");
-            string rendered = template.Render();
+            string rendered = await template.RenderAsync();
 
             Assert.AreEqual("", rendered);
             Assert.AreEqual(1, template.Errors.Count);
@@ -265,10 +270,10 @@ namespace DotLiquid.Tests
         }
 
         [Test]
-        public void TestVariableNotFoundFromAnonymousObject()
+        public async Task TestVariableNotFoundFromAnonymousObject()
         {
             Template template = Template.Parse("{{ first.test }}{{ second.test }}");
-            string rendered = template.Render(Hash.FromAnonymousObject(new { second = new { foo = "hi!" } }));
+            string rendered = await template.RenderAsync(Hash.FromAnonymousObject(new { second = new { foo = "hi!" } }));
 
             Assert.AreEqual("", rendered);
             Assert.AreEqual(2, template.Errors.Count);
@@ -279,27 +284,27 @@ namespace DotLiquid.Tests
         [Test]
         public void TestVariableNotFoundException()
         {
-            Assert.DoesNotThrow(() => Template.Parse("{{ does_not_exist }}").Render(new RenderParameters(CultureInfo.InvariantCulture)
+            Assert.DoesNotThrowAsync(() => Template.Parse("{{ does_not_exist }}").RenderAsync(new RenderParameters(CultureInfo.InvariantCulture)
             {
                 RethrowErrors = true
             }));
         }
 
         [Test]
-        public void TestVariableNotFoundExceptionIgnoredForIfStatement()
+        public async Task TestVariableNotFoundExceptionIgnoredForIfStatement()
         {
             Template template = Template.Parse("{% if does_not_exist %}abc{% endif %}");
-            string rendered = template.Render();
+            string rendered = await template.RenderAsync();
 
             Assert.AreEqual("", rendered);
             Assert.AreEqual(0, template.Errors.Count);
         }
 
         [Test]
-        public void TestVariableNotFoundExceptionIgnoredForUnlessStatement()
+        public async Task TestVariableNotFoundExceptionIgnoredForUnlessStatement()
         {
             Template template = Template.Parse("{% unless does_not_exist %}abc{% endunless %}");
-            string rendered = template.Render();
+            string rendered = await template.RenderAsync();
 
             Assert.AreEqual("abc", rendered);
             Assert.AreEqual(0, template.Errors.Count);
@@ -325,77 +330,77 @@ namespace DotLiquid.Tests
         }
 
         [Test]
-        public void TestLengthQuery()
+        public async Task TestLengthQuery()
         {
-            _context["numbers"] = new[] { 1, 2, 3, 4 };
-            Assert.AreEqual(4, _context["numbers.size"]);
+            _context.Set("numbers", new[] { 1, 2, 3, 4 });
+            Assert.AreEqual(4, await _context.GetAsync("numbers.size"));
 
-            _context["numbers"] = new Dictionary<int, int>
+            _context.Set("numbers", new Dictionary<int, int>
             {
                 { 1, 1 },
                 { 2, 2 },
                 { 3, 3 },
                 { 4, 4 }
-            };
-            Assert.AreEqual(4, _context["numbers.size"]);
+            });
+            Assert.AreEqual(4, await _context.GetAsync("numbers.size"));
 
-            _context["numbers"] = new Dictionary<object, int>
+            _context.Set("numbers", new Dictionary<object, int>
             {
                 { 1, 1 },
                 { 2, 2 },
                 { 3, 3 },
                 { 4, 4 },
                 { "size", 1000 }
-            };
-            Assert.AreEqual(1000, _context["numbers.size"]);
+            });
+            Assert.AreEqual(1000, await _context.GetAsync("numbers.size"));
         }
 
         [Test]
-        public void TestHyphenatedVariable()
+        public async Task TestHyphenatedVariable()
         {
-            _context["oh-my"] = "godz";
-            Assert.AreEqual("godz", _context["oh-my"]);
+            _context.Set("oh-my", "godz");
+            Assert.AreEqual("godz", await _context.GetAsync("oh-my"));
         }
 
         [Test]
-        public void TestAddFilter()
+        public async Task TestAddFilter()
         {
             Context context = new Context(CultureInfo.InvariantCulture);
             context.AddFilters(new[] { typeof(TestFilters) });
-            Assert.AreEqual("hi? hi!", context.Invoke("hi", new List<object> { "hi?" }));
+            Assert.AreEqual("hi? hi!", await context.InvokeAsync("hi", new List<object> { "hi?" }));
             context.SyntaxCompatibilityLevel = SyntaxCompatibility.DotLiquid22;
-            Assert.AreEqual("hi? hi!", context.Invoke("hi", new List<object> { "hi?" }));
+            Assert.AreEqual("hi? hi!", await context.InvokeAsync("hi", new List<object> { "hi?" }));
 
             context = new Context(CultureInfo.InvariantCulture);
-            Assert.AreEqual("hi?", context.Invoke("hi", new List<object> { "hi?" }));
+            Assert.AreEqual("hi?", await context.InvokeAsync("hi", new List<object> { "hi?" }));
             context.SyntaxCompatibilityLevel = SyntaxCompatibility.DotLiquid22;
-            Assert.Throws<FilterNotFoundException>(() => context.Invoke("hi", new List<object> { "hi?" }));
+            Assert.ThrowsAsync<FilterNotFoundException>(async () => await context.InvokeAsync("hi", new List<object> { "hi?" }));
         }
 
         [Test]
-        public void TestAddContextFilter()
+        public async Task TestAddContextFilter()
         {
             // This test differs from TestAddFilter only in that the Hi method within this class has a Context parameter in addition to the input string
             Context context = new Context(CultureInfo.InvariantCulture) { SyntaxCompatibilityLevel = SyntaxCompatibility.DotLiquid20 };
-            context["name"] = "King Kong";
+            context.Set("name", "King Kong");
 
             context.AddFilters(new[] { typeof(TestContextFilters) });
-            Assert.AreEqual("hi? hi from King Kong!", context.Invoke("hi", new List<object> { "hi?" }));
+            Assert.AreEqual("hi? hi from King Kong!", await context.InvokeAsync("hi", new List<object> { "hi?" }));
             context.SyntaxCompatibilityLevel = SyntaxCompatibility.DotLiquid22;
-            Assert.AreEqual("hi? hi from King Kong!", context.Invoke("hi", new List<object> { "hi?" }));
+            Assert.AreEqual("hi? hi from King Kong!", await context.InvokeAsync("hi", new List<object> { "hi?" }));
 
             context = new Context(CultureInfo.InvariantCulture) { SyntaxCompatibilityLevel = SyntaxCompatibility.DotLiquid20 };
-            Assert.AreEqual("hi?", context.Invoke("hi", new List<object> { "hi?" }));
+            Assert.AreEqual("hi?", await context.InvokeAsync("hi", new List<object> { "hi?" }));
             context.SyntaxCompatibilityLevel = SyntaxCompatibility.DotLiquid22;
-            Assert.Throws<FilterNotFoundException>(() => context.Invoke("hi", new List<object> { "hi?" }));
+            Assert.ThrowsAsync<FilterNotFoundException>(async () => await context.InvokeAsync("hi", new List<object> { "hi?" }));
         }
 
         [Test]
-        public void TestOverrideGlobalFilter()
+        public async Task TestOverrideGlobalFilter()
         {
             Template.RegisterFilter(typeof(GlobalFilters));
-            Assert.AreEqual("Global test", Template.Parse("{{'test' | notice }}").Render());
-            Assert.AreEqual("Local test", Template.Parse("{{'test' | notice }}").Render(new RenderParameters(CultureInfo.InvariantCulture) { Filters = new[] { typeof(LocalFilters) } }));
+            Assert.AreEqual("Global test", await Template.Parse("{{'test' | notice }}").RenderAsync());
+            Assert.AreEqual("Local test", await Template.Parse("{{'test' | notice }}").RenderAsync(new RenderParameters(CultureInfo.InvariantCulture) { Filters = new[] { typeof(LocalFilters) } }));
         }
 
         [Test]
@@ -411,310 +416,310 @@ namespace DotLiquid.Tests
         }
 
         [Test]
-        public void TestAddItemInOuterScope()
+        public async Task TestAddItemInOuterScope()
         {
-            _context["test"] = "test";
+            _context.Set("test", "test");
             _context.Push(new Hash());
-            Assert.AreEqual("test", _context["test"]);
+            Assert.AreEqual("test", await _context.GetAsync("test"));
             _context.Pop();
-            Assert.AreEqual("test", _context["test"]);
+            Assert.AreEqual("test", await _context.GetAsync("test"));
         }
 
         [Test]
-        public void TestAddItemInInnerScope()
+        public async Task TestAddItemInInnerScope()
         {
             _context.Push(new Hash());
-            _context["test"] = "test";
-            Assert.AreEqual("test", _context["test"]);
+            _context.Set("test", "test");
+            Assert.AreEqual("test", await _context.GetAsync("test"));
             _context.Pop();
-            Assert.AreEqual(null, _context["test"]);
+            Assert.AreEqual(null, await _context.GetAsync("test"));
         }
 
         [Test]
-        public void TestHierarchicalData()
+        public async Task TestHierarchicalData()
         {
-            _context["hash"] = new { name = "tobi" };
-            Assert.AreEqual("tobi", _context["hash.name"]);
-            Assert.AreEqual("tobi", _context["hash['name']"]);
+            _context.Set("hash", new { name = "tobi" });
+            Assert.AreEqual("tobi", await _context.GetAsync("hash.name"));
+            Assert.AreEqual("tobi", await _context.GetAsync("hash['name']"));
         }
 
         [Test]
-        public void TestKeywords()
+        public async Task TestKeywords()
         {
-            Assert.AreEqual(true, _context["true"]);
-            Assert.AreEqual(false, _context["false"]);
+            Assert.AreEqual(true, await _context.GetAsync("true"));
+            Assert.AreEqual(false, await _context.GetAsync("false"));
         }
 
         [Test]
-        public void TestDigits()
+        public async Task TestDigits()
         {
-            Assert.AreEqual(100, _context["100"]);
-            Assert.AreEqual(100.00, _context[string.Format("100{0}00", System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator)]);
+            Assert.AreEqual(100, await _context.GetAsync("100"));
+            Assert.AreEqual(100.00, await _context.GetAsync(string.Format("100{0}00", System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator)));
         }
 
         [Test]
-        public void TestStrings()
+        public async Task TestStrings()
         {
-            Assert.AreEqual("hello!", _context["'hello!'"]);
-            Assert.AreEqual("hello!", _context["'hello!'"]);
+            Assert.AreEqual("hello!", await _context.GetAsync("'hello!'"));
+            Assert.AreEqual("hello!", await _context.GetAsync("'hello!'"));
         }
 
         [Test]
-        public void TestMerge()
+        public async Task TestMerge()
         {
             _context.Merge(new Hash { { "test", "test" } });
-            Assert.AreEqual("test", _context["test"]);
+            Assert.AreEqual("test", await _context.GetAsync("test"));
             _context.Merge(new Hash { { "test", "newvalue" }, { "foo", "bar" } });
-            Assert.AreEqual("newvalue", _context["test"]);
-            Assert.AreEqual("bar", _context["foo"]);
+            Assert.AreEqual("newvalue", await _context.GetAsync("test"));
+            Assert.AreEqual("bar", await _context.GetAsync("foo"));
         }
 
         [Test]
-        public void TestArrayNotation()
+        public async Task TestArrayNotation()
         {
-            _context["test"] = new[] { 1, 2, 3, 4, 5 };
+            _context.Set("test", new[] { 1, 2, 3, 4, 5 });
 
-            Assert.AreEqual(1, _context["test[0]"]);
-            Assert.AreEqual(2, _context["test[1]"]);
-            Assert.AreEqual(3, _context["test[2]"]);
-            Assert.AreEqual(4, _context["test[3]"]);
-            Assert.AreEqual(5, _context["test[4]"]);
+            Assert.AreEqual(1, await _context.GetAsync("test[0]"));
+            Assert.AreEqual(2, await _context.GetAsync("test[1]"));
+            Assert.AreEqual(3, await _context.GetAsync("test[2]"));
+            Assert.AreEqual(4, await _context.GetAsync("test[3]"));
+            Assert.AreEqual(5, await _context.GetAsync("test[4]"));
         }
 
         [Test]
-        public void TestRecursiveArrayNotation()
+        public async Task TestRecursiveArrayNotation()
         {
-            _context["test"] = new { test = new[] { 1, 2, 3, 4, 5 } };
+            _context.Set("test", new { test = new[] { 1, 2, 3, 4, 5 } });
 
-            Assert.AreEqual(1, _context["test.test[0]"]);
+            Assert.AreEqual(1, await _context.GetAsync("test.test[0]"));
 
-            _context["test"] = new[] { new { test = "worked" } };
+            _context.Set("test", new[] { new { test = "worked" } });
 
-            Assert.AreEqual("worked", _context["test[0].test"]);
+            Assert.AreEqual("worked", await _context.GetAsync("test[0].test"));
         }
 
         [Test]
-        public void TestHashToArrayTransition()
+        public async Task TestHashToArrayTransition()
         {
-            _context["colors"] = new
+            _context.Set("colors", new
             {
                 Blue = new[] { "003366", "336699", "6699CC", "99CCFF" },
                 Green = new[] { "003300", "336633", "669966", "99CC99" },
                 Yellow = new[] { "CC9900", "FFCC00", "FFFF99", "FFFFCC" },
                 Red = new[] { "660000", "993333", "CC6666", "FF9999" }
-            };
+            });
 
-            Assert.AreEqual("003366", _context["colors.Blue[0]"]);
-            Assert.AreEqual("FF9999", _context["colors.Red[3]"]);
+            Assert.AreEqual("003366", await _context.GetAsync("colors.Blue[0]"));
+            Assert.AreEqual("FF9999", await _context.GetAsync("colors.Red[3]"));
         }
 
         [Test]
-        public void TestFirstLastSize()
+        public async Task TestFirstLastSize()
         {
-            _context["test"] = new[] { 1, 2, 3, 4, 5 };
+            _context.Set("test", new[] { 1, 2, 3, 4, 5 });
 
-            Assert.AreEqual(1, _context["test.first"]);
-            Assert.AreEqual(5, _context["test.last"]);
-            Assert.AreEqual(5, _context["test.size"]);
+            Assert.AreEqual(1, await _context.GetAsync("test.first"));
+            Assert.AreEqual(5, await _context.GetAsync("test.last"));
+            Assert.AreEqual(5, await _context.GetAsync("test.size"));
 
-            _context["test"] = new { test = new[] { 1, 2, 3, 4, 5 } };
+            _context.Set("test", new { test = new[] { 1, 2, 3, 4, 5 } });
 
-            Assert.AreEqual(1, _context["test.test.first"]);
-            Assert.AreEqual(5, _context["test.test.last"]);
-            Assert.AreEqual(5, _context["test.test.size"]);
+            Assert.AreEqual(1, await _context.GetAsync("test.test.first"));
+            Assert.AreEqual(5, await _context.GetAsync("test.test.last"));
+            Assert.AreEqual(5, await _context.GetAsync("test.test.size"));
 
-            _context["test"] = new[] { 1 };
+            _context.Set("test", new[] { 1 });
 
-            Assert.AreEqual(1, _context["test.first"]);
-            Assert.AreEqual(1, _context["test.last"]);
-            Assert.AreEqual(1, _context["test.size"]);
+            Assert.AreEqual(1, await _context.GetAsync("test.first"));
+            Assert.AreEqual(1, await _context.GetAsync("test.last"));
+            Assert.AreEqual(1, await _context.GetAsync("test.size"));
         }
 
         [Test]
-        public void TestAccessHashesWithHashNotation()
+        public async Task TestAccessHashesWithHashNotation()
         {
-            _context["products"] = new { count = 5, tags = new[] { "deepsnow", "freestyle" } };
-            _context["product"] = new { variants = new[] { new { title = "draft151cm" }, new { title = "element151cm" } } };
+            _context.Set("products", new { count = 5, tags = new[] { "deepsnow", "freestyle" } });
+            _context.Set("product", new { variants = new[] { new { title = "draft151cm" }, new { title = "element151cm" } } });
 
-            Assert.AreEqual(5, _context["products[\"count\"]"]);
-            Assert.AreEqual("deepsnow", _context["products['tags'][0]"]);
-            Assert.AreEqual("deepsnow", _context["products['tags'].first"]);
-            Assert.AreEqual("freestyle", _context["products['tags'].last"]);
-            Assert.AreEqual(2, _context["products['tags'].size"]);
-            Assert.AreEqual("draft151cm", _context["product['variants'][0][\"title\"]"]);
-            Assert.AreEqual("element151cm", _context["product['variants'][1]['title']"]);
-            Assert.AreEqual("draft151cm", _context["product['variants'][0]['title']"]);
-            Assert.AreEqual("element151cm", _context["product['variants'].last['title']"]);
+            Assert.AreEqual(5, await _context.GetAsync("products[\"count\"]"));
+            Assert.AreEqual("deepsnow", await _context.GetAsync("products['tags'][0]"));
+            Assert.AreEqual("deepsnow", await _context.GetAsync("products['tags'].first"));
+            Assert.AreEqual("freestyle", await _context.GetAsync("products['tags'].last"));
+            Assert.AreEqual(2, await _context.GetAsync("products['tags'].size"));
+            Assert.AreEqual("draft151cm", await _context.GetAsync("product['variants'][0][\"title\"]"));
+            Assert.AreEqual("element151cm", await _context.GetAsync("product['variants'][1]['title']"));
+            Assert.AreEqual("draft151cm", await _context.GetAsync("product['variants'][0]['title']"));
+            Assert.AreEqual("element151cm", await _context.GetAsync("product['variants'].last['title']"));
         }
 
         [Test]
-        public void TestAccessVariableWithHashNotation()
+        public async Task TestAccessVariableWithHashNotation()
         {
-            _context["foo"] = "baz";
-            _context["bar"] = "foo";
+            _context.Set("foo", "baz");
+            _context.Set("bar", "foo");
 
-            Assert.AreEqual("baz", _context["[\"foo\"]"]);
-            Assert.AreEqual("baz", _context["[bar]"]);
+            Assert.AreEqual("baz", await _context.GetAsync("[\"foo\"]"));
+            Assert.AreEqual("baz", await _context.GetAsync("[bar]"));
         }
 
         [Test]
-        public void TestAccessHashesWithHashAccessVariables()
+        public async Task TestAccessHashesWithHashAccessVariables()
         {
-            _context["var"] = "tags";
-            _context["nested"] = new { var = "tags" };
-            _context["products"] = new { count = 5, tags = new[] { "deepsnow", "freestyle" } };
+            _context.Set("var", "tags");
+            _context.Set("nested", new { var = "tags" });
+            _context.Set("products", new { count = 5, tags = new[] { "deepsnow", "freestyle" } });
 
-            Assert.AreEqual("deepsnow", _context["products[var].first"]);
-            Assert.AreEqual("freestyle", _context["products[nested.var].last"]);
+            Assert.AreEqual("deepsnow", await _context.GetAsync("products[var].first"));
+            Assert.AreEqual("freestyle", await _context.GetAsync("products[nested.var].last"));
         }
 
         [Test]
-        public void TestHashNotationOnlyForHashAccess()
+        public async Task TestHashNotationOnlyForHashAccess()
         {
-            _context["array"] = new[] { 1, 2, 3, 4, 5 };
-            _context["hash"] = new { first = "Hello" };
+            _context.Set("array", new[] { 1, 2, 3, 4, 5 });
+            _context.Set("hash", new { first = "Hello" });
 
-            Assert.AreEqual(1, _context["array.first"]);
-            Assert.AreEqual(null, _context["array['first']"]);
-            Assert.AreEqual("Hello", _context["hash['first']"]);
+            Assert.AreEqual(1, await _context.GetAsync("array.first"));
+            Assert.AreEqual(null, await _context.GetAsync("array['first']"));
+            Assert.AreEqual("Hello", await _context.GetAsync("hash['first']"));
         }
 
         [Test]
-        public void TestFirstCanAppearInMiddleOfCallchain()
+        public async Task TestFirstCanAppearInMiddleOfCallchain()
         {
-            _context["product"] = new { variants = new[] { new { title = "draft151cm" }, new { title = "element151cm" } } };
+            _context.Set("product", new { variants = new[] { new { title = "draft151cm" }, new { title = "element151cm" } } });
 
-            Assert.AreEqual("draft151cm", _context["product.variants[0].title"]);
-            Assert.AreEqual("element151cm", _context["product.variants[1].title"]);
-            Assert.AreEqual("draft151cm", _context["product.variants.first.title"]);
-            Assert.AreEqual("element151cm", _context["product.variants.last.title"]);
+            Assert.AreEqual("draft151cm", await _context.GetAsync("product.variants[0].title"));
+            Assert.AreEqual("element151cm", await _context.GetAsync("product.variants[1].title"));
+            Assert.AreEqual("draft151cm", await _context.GetAsync("product.variants.first.title"));
+            Assert.AreEqual("element151cm", await _context.GetAsync("product.variants.last.title"));
         }
 
         [Test]
-        public void TestCents()
+        public async Task TestCents()
         {
             _context.Merge(Hash.FromAnonymousObject(new { cents = new HundredCents() }));
-            Assert.AreEqual(100, _context["cents"]);
+            Assert.AreEqual(100, await _context.GetAsync("cents"));
         }
 
         [Test]
-        public void TestNestedCents()
+        public async Task TestNestedCents()
         {
             _context.Merge(Hash.FromAnonymousObject(new { cents = new { amount = new HundredCents() } }));
-            Assert.AreEqual(100, _context["cents.amount"]);
+            Assert.AreEqual(100, await _context.GetAsync("cents.amount"));
 
             _context.Merge(Hash.FromAnonymousObject(new { cents = new { cents = new { amount = new HundredCents() } } }));
-            Assert.AreEqual(100, _context["cents.cents.amount"]);
+            Assert.AreEqual(100, await _context.GetAsync("cents.cents.amount"));
         }
 
         [Test]
-        public void TestCentsThroughDrop()
+        public async Task TestCentsThroughDrop()
         {
             _context.Merge(Hash.FromAnonymousObject(new { cents = new CentsDrop() }));
-            Assert.AreEqual(100, _context["cents.amount"]);
+            Assert.AreEqual(100, await _context.GetAsync("cents.amount"));
         }
 
         [Test]
-        public void TestNestedCentsThroughDrop()
+        public async Task TestNestedCentsThroughDrop()
         {
             _context.Merge(Hash.FromAnonymousObject(new { vars = new { cents = new CentsDrop() } }));
-            Assert.AreEqual(100, _context["vars.cents.amount"]);
+            Assert.AreEqual(100, await _context.GetAsync("vars.cents.amount"));
         }
 
         [Test]
-        public void TestDropMethodsWithQuestionMarks()
+        public async Task TestDropMethodsWithQuestionMarks()
         {
             _context.Merge(Hash.FromAnonymousObject(new { cents = new CentsDrop() }));
-            Assert.AreEqual(true, _context["cents.non_zero"]);
+            Assert.AreEqual(true, await _context.GetAsync("cents.non_zero"));
         }
 
         [Test]
-        public void TestContextFromWithinDrop()
+        public async Task TestContextFromWithinDrop()
         {
             _context.Merge(Hash.FromAnonymousObject(new { test = "123", vars = new ContextSensitiveDrop() }));
-            Assert.AreEqual("123", _context["vars.test"]);
+            Assert.AreEqual("123", await _context.GetAsync("vars.test"));
         }
 
         [Test]
-        public void TestNestedContextFromWithinDrop()
+        public async Task TestNestedContextFromWithinDrop()
         {
             _context.Merge(Hash.FromAnonymousObject(new { test = "123", vars = new { local = new ContextSensitiveDrop() } }));
-            Assert.AreEqual("123", _context["vars.local.test"]);
+            Assert.AreEqual("123", await _context.GetAsync("vars.local.test"));
         }
 
         [Test]
-        public void TestRanges()
+        public async Task TestRanges()
         {
             _context.Merge(Hash.FromAnonymousObject(new { test = 5 }));
-            CollectionAssert.AreEqual(Enumerable.Range(1, 5), _context["(1..5)"] as IEnumerable);
-            CollectionAssert.AreEqual(Enumerable.Range(1, 5), _context["(1..test)"] as IEnumerable);
-            CollectionAssert.AreEqual(Enumerable.Range(5, 1), _context["(test..test)"] as IEnumerable);
+            CollectionAssert.AreEqual(Enumerable.Range(1, 5), await _context.GetAsync("(1..5)") as IEnumerable);
+            CollectionAssert.AreEqual(Enumerable.Range(1, 5), await _context.GetAsync("(1..test)") as IEnumerable);
+            CollectionAssert.AreEqual(Enumerable.Range(5, 1), await _context.GetAsync("(test..test)") as IEnumerable);
         }
 
         [Test]
-        public void TestCentsThroughDropNestedly()
+        public async Task TestCentsThroughDropNestedly()
         {
             _context.Merge(Hash.FromAnonymousObject(new { cents = new { cents = new CentsDrop() } }));
-            Assert.AreEqual(100, _context["cents.cents.amount"]);
+            Assert.AreEqual(100, await _context.GetAsync("cents.cents.amount"));
 
             _context.Merge(Hash.FromAnonymousObject(new { cents = new { cents = new { cents = new CentsDrop() } } }));
-            Assert.AreEqual(100, _context["cents.cents.cents.amount"]);
+            Assert.AreEqual(100, await _context.GetAsync("cents.cents.cents.amount"));
         }
 
         [Test]
-        public void TestDropWithVariableCalledOnlyOnce()
+        public async Task TestDropWithVariableCalledOnlyOnce()
         {
-            _context["counter"] = new CounterDrop();
+            _context.Set("counter", new CounterDrop());
 
-            Assert.AreEqual(1, _context["counter.count"]);
-            Assert.AreEqual(2, _context["counter.count"]);
-            Assert.AreEqual(3, _context["counter.count"]);
+            Assert.AreEqual(1, await _context.GetAsync("counter.count"));
+            Assert.AreEqual(2, await _context.GetAsync("counter.count"));
+            Assert.AreEqual(3, await _context.GetAsync("counter.count"));
         }
 
         [Test]
-        public void TestDropWithKeyOnlyCalledOnce()
+        public async Task TestDropWithKeyOnlyCalledOnce()
         {
-            _context["counter"] = new CounterDrop();
+            _context.Set("counter", new CounterDrop());
 
-            Assert.AreEqual(1, _context["counter['count']"]);
-            Assert.AreEqual(2, _context["counter['count']"]);
-            Assert.AreEqual(3, _context["counter['count']"]);
+            Assert.AreEqual(1, await _context.GetAsync("counter['count']"));
+            Assert.AreEqual(2, await _context.GetAsync("counter['count']"));
+            Assert.AreEqual(3, await _context.GetAsync("counter['count']"));
         }
 
         [Test]
-        public void TestSimpleVariablesRendering()
+        public async Task TestSimpleVariablesRendering()
         {
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "string",
                 template: "{{context}}",
                 localVariables: Hash.FromAnonymousObject(new { context = "string" }));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "EscapedCharacter\"",
                 template: "{{context}}",
                 localVariables: Hash.FromAnonymousObject(new { context = "EscapedCharacter\"" }));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "5",
                 template: "{{context}}",
                 localVariables: Hash.FromAnonymousObject(new { context = 5 }));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "5",
                 template: "{{context}}",
                 localVariables: Hash.FromAnonymousObject(new { context = 5m }));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "5",
                 template: "{{context}}",
                 localVariables: Hash.FromAnonymousObject(new { context = 5.0f }));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "5",
                 template: "{{context}}",
                 localVariables: Hash.FromAnonymousObject(new { context = 5.0 }));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "1.00:00:00",
                 template: "{{context}}",
                 localVariables: Hash.FromAnonymousObject(new { context = TimeSpan.FromDays(1) }));
@@ -722,116 +727,116 @@ namespace DotLiquid.Tests
             // The expected values are expressed in en-US, so ensure the template runs with that Culture.
             using (CultureHelper.SetCulture("en-US"))
             {
-                Helper.AssertTemplateResult(
+                await Helper.AssertTemplateResultAsync(
                     expected: "1/1/0001 12:00:00 AM",
                     template: "{{context}}",
                     localVariables: Hash.FromAnonymousObject(new { context = DateTime.MinValue }));
 
-                Helper.AssertTemplateResult(
+                await Helper.AssertTemplateResultAsync(
                     expected: "9/10/2013 12:10:32 AM +01:00",
                     template: "{{context}}",
                     localVariables: Hash.FromAnonymousObject(new { context = new DateTimeOffset(2013, 9, 10, 0, 10, 32, new TimeSpan(1, 0, 0)) }));
             }
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "d0f28a51-9393-4658-af0b-8c4b4c5c31ff",
                 template: "{{context}}",
                 localVariables: Hash.FromAnonymousObject(new { context = new Guid("{D0F28A51-9393-4658-AF0B-8C4B4C5C31FF}") }));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "true",
                 template: "{{context}}",
                 localVariables: Hash.FromAnonymousObject(new { context = true }));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "false",
                 template: "{{context}}",
                 localVariables: Hash.FromAnonymousObject(new { context = false }));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "",
                 template: "{{context}}",
                 localVariables: Hash.FromAnonymousObject(new { context = null as string }));
         }
 
         [Test]
-        public void TestListRendering()
+        public async Task TestListRendering()
         {
             Assert.AreEqual(
                 expected: "text1text2",
-                actual: Template
+                actual: await Template
                     .Parse("{{context}}")
-                    .Render(Hash.FromAnonymousObject(new { context = new LiquidizableList() })));
+                    .RenderAsync(Hash.FromAnonymousObject(new { context = new LiquidizableList() })));
         }
 
         [Test]
-        public void TestWrappedListRendering()
+        public async Task TestWrappedListRendering()
         {
             Assert.AreEqual(
                 expected: string.Empty,
-                actual: Template
+                actual: await Template
                     .Parse("{{context}}")
-                    .Render(Hash.FromAnonymousObject(new { context = new IndexableLiquidizable() })));
+                    .RenderAsync(Hash.FromAnonymousObject(new { context = new IndexableLiquidizable() })));
 
             Assert.AreEqual(
                 expected: "text1text2",
-                actual: Template
+                actual: await Template
                     .Parse("{{context.thekey}}")
-                    .Render(Hash.FromAnonymousObject(new { context = new IndexableLiquidizable() })));
+                    .RenderAsync(Hash.FromAnonymousObject(new { context = new IndexableLiquidizable() })));
         }
 
         [Test]
-        public void TestDictionaryRendering()
+        public async Task TestDictionaryRendering()
         {
             Assert.AreEqual(
                 expected: "[lambda, Hello][alpha, bet]",
-                actual: Template
+                actual: await Template
                     .Parse("{{context}}")
-                    .Render(Hash.FromAnonymousObject(new { context = new Dictionary<string, object> { ["lambda"] = "Hello", ["alpha"] = "bet" } })));
+                    .RenderAsync(Hash.FromAnonymousObject(new { context = new Dictionary<string, object> { ["lambda"] = "Hello", ["alpha"] = "bet" } })));
         }
 
         [Test]
-        public void TestDictionaryAsVariable()
+        public async Task TestDictionaryAsVariable()
         {
-            _context["dynamic"] = Hash.FromDictionary(new Dictionary<string, object> { ["lambda"] = "Hello" });
+            _context.Set("dynamic", Hash.FromDictionary(new Dictionary<string, object> { ["lambda"] = "Hello" }));
 
-            Assert.AreEqual("Hello", _context["dynamic.lambda"]);
+            Assert.AreEqual("Hello", await _context.GetAsync("dynamic.lambda"));
         }
 
         [Test]
-        public void TestNestedDictionaryAsVariable()
+        public async Task TestNestedDictionaryAsVariable()
         {
-            _context["dynamic"] = Hash.FromDictionary(new Dictionary<string, object> { ["lambda"] = new Dictionary<string, object> { ["name"] = "Hello" } });
+            _context.Set("dynamic", Hash.FromDictionary(new Dictionary<string, object> { ["lambda"] = new Dictionary<string, object> { ["name"] = "Hello" } }));
 
-            Assert.AreEqual("Hello", _context["dynamic.lambda.name"]);
+            Assert.AreEqual("Hello", await _context.GetAsync("dynamic.lambda.name"));
         }
 
         [Test]
-        public void TestDynamicAsVariable()
+        public async Task TestDynamicAsVariable()
         {
             dynamic expandoObject = new ExpandoObject();
             expandoObject.lambda = "Hello";
-            _context["dynamic"] = Hash.FromDictionary(expandoObject);
+            _context.Set("dynamic", Hash.FromDictionary(expandoObject));
 
-            Assert.AreEqual("Hello", _context["dynamic.lambda"]);
+            Assert.AreEqual("Hello", await _context.GetAsync("dynamic.lambda"));
         }
 
         [Test]
-        public void TestNestedDynamicAsVariable()
+        public async Task TestNestedDynamicAsVariable()
         {
             dynamic root = new ExpandoObject();
             root.lambda = new ExpandoObject();
             root.lambda.name = "Hello";
-            _context["dynamic"] = Hash.FromDictionary(root);
+            _context.Set("dynamic", Hash.FromDictionary(root));
 
-            Assert.AreEqual("Hello", _context["dynamic.lambda.name"]);
+            Assert.AreEqual("Hello", await _context.GetAsync("dynamic.lambda.name"));
         }
 
         /// <summary>
         /// Test case for [Issue #350](https://github.com/dotliquid/dotliquid/issues/350)
         /// </summary>
         [Test]
-        public void TestNestedExpandoTemplate_Issue350()
+        public async Task TestNestedExpandoTemplate_Issue350()
         {
             var model = new ExpandoModel()
             {
@@ -846,42 +851,42 @@ namespace DotLiquid.Tests
             const string templateString = @"Int: '{{IntProperty}}'; String: '{{StringProperty}}'; Expando: '{{Properties.Key1}}'";
             var template = Template.Parse(templateString);
             Assert.AreEqual(expected: "Int: '23'; String: 'from string property'; Expando: 'ExpandoObject Key1 value'",
-                            actual: template.Render(Hash.FromAnonymousObject(model)));
+                            actual: await template.RenderAsync(Hash.FromAnonymousObject(model)));
         }
 
         /// <summary>
         /// Test case for [Issue #417](https://github.com/dotliquid/dotliquid/issues/417)
         /// </summary>
         [Test]
-        public void TestNestedExpandoTemplate_Issue417()
+        public async Task TestNestedExpandoTemplate_Issue417()
         {
             var modelString = "{\"States\": [{\"Name\": \"Texas\",\"Code\": \"TX\"}, {\"Name\": \"New York\",\"Code\": \"NY\"}]}";
             var template = "State Is:{{States[0].Name}}";
 
             var model = JsonConvert.DeserializeObject<ExpandoObject>(modelString);
             var modelHash = Hash.FromDictionary(model);
-            Assert.AreEqual(expected: "State Is:Texas", actual: Template.Parse(template).Render(modelHash));
+            Assert.AreEqual(expected: "State Is:Texas", actual: await Template.Parse(template).RenderAsync(modelHash));
         }
 
         /// <summary>
         /// Test case for [Issue #474](https://github.com/dotliquid/dotliquid/issues/474)
         /// </summary>
         [Test]
-        public void TestDecimalIndexer_Issue474()
+        public async Task TestDecimalIndexer_Issue474()
         {
             var template = @"{% assign idx = fraction | minus: 0.01 -%}
 {{ arr[0] }}
 {{ arr[idx] }}";
 
             var modelHash = Hash.FromAnonymousObject(new { arr = new[] { "Zero", "One" }, fraction = 0.01 });
-            Assert.AreEqual(expected: "Zero\r\nZero", actual: Template.Parse(template).Render(modelHash));
+            Assert.AreEqual(expected: "Zero\r\nZero", actual: await Template.Parse(template).RenderAsync(modelHash));
         }
 
         /// <summary>
         /// Test case for [Issue #474](https://github.com/dotliquid/dotliquid/issues/474)
         /// </summary>
         [Test]
-        public void TestAllTypesIndexer_Issue474()
+        public async Task TestAllTypesIndexer_Issue474()
         {
             var zero = 0;
             var typesToTest = Util.ExpressionUtilityTest.GetNumericCombinations().Select(item => item.Item1).Distinct().ToList();
@@ -892,107 +897,107 @@ namespace DotLiquid.Tests
 {% endfor %}";
 
             var modelHash = Hash.FromAnonymousObject(new { arr = new[] { "Zero", "One" }, numerics = arrayOfZeroTypes });
-            Assert.AreEqual(expected: string.Join(String.Empty, Enumerable.Repeat("Zero\r\n", arrayOfZeroTypes.Count)), actual: Template.Parse(template).Render(modelHash));
+            Assert.AreEqual(expected: string.Join(String.Empty, Enumerable.Repeat("Zero\r\n", arrayOfZeroTypes.Count)), actual: await Template.Parse(template).RenderAsync(modelHash));
         }
 
         [Test]
-        public void TestProcAsVariable()
+        public async Task TestProcAsVariable()
         {
-            _context["dynamic"] = (Proc)delegate { return "Hello"; };
+            _context.Set("dynamic", (Proc)delegate { return "Hello"; });
 
-            Assert.AreEqual("Hello", _context["dynamic"]);
+            Assert.AreEqual("Hello", await _context.GetAsync("dynamic"));
         }
 
         [Test]
-        public void TestLambdaAsVariable()
+        public async Task TestLambdaAsVariable()
         {
-            _context["dynamic"] = (Proc)(c => "Hello");
+            _context.Set("dynamic", (Proc)(c => "Hello"));
 
-            Assert.AreEqual("Hello", _context["dynamic"]);
+            Assert.AreEqual("Hello", await _context.GetAsync("dynamic"));
         }
 
         [Test]
-        public void TestNestedLambdaAsVariable()
+        public async Task TestNestedLambdaAsVariable()
         {
-            _context["dynamic"] = Hash.FromAnonymousObject(new { lambda = (Proc)(c => "Hello") });
+            _context.Set("dynamic", Hash.FromAnonymousObject(new { lambda = (Proc)(c => "Hello") }));
 
-            Assert.AreEqual("Hello", _context["dynamic.lambda"]);
+            Assert.AreEqual("Hello", await _context.GetAsync("dynamic.lambda"));
         }
 
         [Test]
-        public void TestArrayContainingLambdaAsVariable()
+        public async Task TestArrayContainingLambdaAsVariable()
         {
-            _context["dynamic"] = new object[] { 1, 2, (Proc)(c => "Hello"), 4, 5 };
+            _context.Set("dynamic", new object[] { 1, 2, (Proc)(c => "Hello"), 4, 5 });
 
-            Assert.AreEqual("Hello", _context["dynamic[2]"]);
+            Assert.AreEqual("Hello", await _context.GetAsync("dynamic[2]"));
         }
 
         [Test]
-        public void TestLambdaIsCalledOnce()
+        public async Task TestLambdaIsCalledOnce()
         {
             int global = 0;
-            _context["callcount"] = (Proc)(c =>
+            _context.Set("callcount", (Proc)(c =>
             {
                 ++global;
                 return global.ToString();
-            });
+            }));
 
-            Assert.AreEqual("1", _context["callcount"]);
-            Assert.AreEqual("1", _context["callcount"]);
-            Assert.AreEqual("1", _context["callcount"]);
+            Assert.AreEqual("1", await _context.GetAsync("callcount"));
+            Assert.AreEqual("1", await _context.GetAsync("callcount"));
+            Assert.AreEqual("1", await _context.GetAsync("callcount"));
         }
 
         [Test]
-        public void TestNestedLambdaIsCalledOnce()
+        public async Task TestNestedLambdaIsCalledOnce()
         {
             int global = 0;
-            _context["callcount"] = Hash.FromAnonymousObject(new
+            _context.Set("callcount", Hash.FromAnonymousObject(new
             {
                 lambda = (Proc)(c =>
                 {
                     ++global;
                     return global.ToString();
                 })
-            });
+            }));
 
-            Assert.AreEqual("1", _context["callcount.lambda"]);
-            Assert.AreEqual("1", _context["callcount.lambda"]);
-            Assert.AreEqual("1", _context["callcount.lambda"]);
+            Assert.AreEqual("1", await _context.GetAsync("callcount.lambda"));
+            Assert.AreEqual("1", await _context.GetAsync("callcount.lambda"));
+            Assert.AreEqual("1", await _context.GetAsync("callcount.lambda"));
         }
 
         [Test]
-        public void TestLambdaInArrayIsCalledOnce()
+        public async Task TestLambdaInArrayIsCalledOnce()
         {
             int global = 0;
-            _context["callcount"] = new object[]
+            _context.Set("callcount", new object[]
             { 1, 2, (Proc) (c =>
-            {
-                ++global;
-                return global.ToString();
-            }), 4, 5
-            };
+                {
+                    ++global;
+                    return global.ToString();
+                }), 4, 5
+            });
 
-            Assert.AreEqual("1", _context["callcount[2]"]);
-            Assert.AreEqual("1", _context["callcount[2]"]);
-            Assert.AreEqual("1", _context["callcount[2]"]);
+            Assert.AreEqual("1", await _context.GetAsync("callcount[2]"));
+            Assert.AreEqual("1", await _context.GetAsync("callcount[2]"));
+            Assert.AreEqual("1", await _context.GetAsync("callcount[2]"));
         }
 
         [Test]
-        public void TestAccessToContextFromProc()
+        public async Task TestAccessToContextFromProc()
         {
             _context.Registers["magic"] = 345392;
 
-            _context["magic"] = (Proc)(c => _context.Registers["magic"]);
+            _context.Set("magic", (Proc)(c => _context.Registers["magic"]));
 
-            Assert.AreEqual(345392, _context["magic"]);
+            Assert.AreEqual(345392, await _context.GetAsync("magic"));
         }
 
         [Test]
-        public void TestToLiquidAndContextAtFirstLevel()
+        public async Task TestToLiquidAndContextAtFirstLevel()
         {
-            _context["category"] = new Category("foobar");
-            Assert.IsInstanceOf<CategoryDrop>(_context["category"]);
-            Assert.AreEqual(_context, ((CategoryDrop)_context["category"]).Context);
+            _context.Set("category", new Category("foobar"));
+            Assert.IsInstanceOf<CategoryDrop>(await _context.GetAsync("category"));
+            Assert.AreEqual(_context, ((CategoryDrop)await _context.GetAsync("category")).Context);
         }
 
         [Test]

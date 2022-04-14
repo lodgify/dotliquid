@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
+using System.Threading.Tasks;
 using DotLiquid.Exceptions;
 using DotLiquid.Util;
 
@@ -93,7 +94,12 @@ namespace DotLiquid
 
         public void AddMethodInfo(string rawName, object target, MethodInfo method)
         {
-            var name = Template.NamingConvention.GetMemberName(rawName);
+            string name = null;
+            if (method.Name.EndsWith("Async"))
+                name = Template.NamingConvention.GetMemberName(rawName.Substring(0, rawName.Length - 5));
+            else
+                name = Template.NamingConvention.GetMemberName(rawName);
+                        
             _methods.TryAdd(name, () => new List<Tuple<object, MethodInfo>>()).Add(Tuple.Create(target, method));
         }
 
@@ -108,7 +114,7 @@ namespace DotLiquid
         /// <param name="method">The method token.</param>
         /// <param name="args">The arguments for invoking the method</param>
         /// <returns>The method's return.</returns>
-        public object Invoke(string method, List<object> args)
+        public async Task<object> InvokeAsync(string method, List<object> args)
         {
             // First, try to find a method with the same number of arguments minus context which we set automatically further down.
             var methodInfo = _methods[method].FirstOrDefault(m => 
@@ -144,15 +150,11 @@ namespace DotLiquid
                     var parameterType = parameterInfos[argumentIndex].ParameterType;
                     if (convertibleArg.GetType() != parameterType
                         && !parameterType
-#if NETSTANDARD1_3
                             .GetTypeInfo()
-#endif
                             .IsAssignableFrom(
                                 convertibleArg
                                     .GetType()
-#if NETSTANDARD1_3
                                     .GetTypeInfo()
-#endif
                                     )
                         )
                     {
@@ -163,7 +165,7 @@ namespace DotLiquid
 
             try
             {
-                return methodInfo.Item2.Invoke(methodInfo.Item1, args.ToArray());
+                return await methodInfo.Item2.InvokeAsync(methodInfo.Item1, args.ToArray());
             }
             catch (TargetInvocationException ex)
             {

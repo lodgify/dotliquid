@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace DotLiquid.Tags
 {
@@ -10,23 +11,23 @@ namespace DotLiquid.Tags
     /// </summary>
     public class Unless : If
     {
-        public override void Render(Context context, TextWriter result)
+        public override async Task RenderAsync(Context context, TextWriter result)
         {
-            context.Stack(() =>
+            await context.StackAsync(async () =>
             {
                 // First condition is interpreted backwards (if not)
                 Condition block = Blocks.First();
-                if (!block.Evaluate(context, result.FormatProvider))
+                if (!await block.EvaluateAsync(context, result.FormatProvider))
                 {
-                    RenderAll(block.Attachment, context, result);
+                    await RenderAllAsync(block.Attachment, context, result);
                     return;
                 }
 
                 // After the first condition unless works just like if
                 foreach (Condition forEachBlock in Blocks.Skip(1))
-                    if (forEachBlock.Evaluate(context, result.FormatProvider))
+                    if (await forEachBlock.EvaluateAsync(context, result.FormatProvider))
                     {
-                        RenderAll(forEachBlock.Attachment, context, result);
+                        await RenderAllAsync(forEachBlock.Attachment, context, result);
                         return;
                     }
             });

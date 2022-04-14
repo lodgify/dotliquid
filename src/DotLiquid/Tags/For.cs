@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using DotLiquid.Exceptions;
 using DotLiquid.Util;
 
@@ -116,15 +117,15 @@ namespace DotLiquid.Tags
         /// </summary>
         /// <param name="context"></param>
         /// <param name="result"></param>
-        public override void Render(Context context, TextWriter result)
+        public override async Task RenderAsync(Context context, TextWriter result)
         {
             // treat non IEnumerable as empty
-            if (!(context[_collectionName] is IEnumerable collection))
+            if (!((await context.GetAsync(_collectionName)) is IEnumerable collection))
             {
                 if (ElseBlock != null)
-                    context.Stack(() =>
+                    await context.StackAsync(async () =>
                     {
-                        RenderAll(ElseBlock.Attachment, context, result);
+                        await RenderAllAsync(ElseBlock.Attachment, context, result);
                     });
                 return;
             }
@@ -133,10 +134,10 @@ namespace DotLiquid.Tags
             int from = (_attributes.ContainsKey("offset"))
                 ? (_attributes["offset"] == "continue")
                     ? Convert.ToInt32(register[_name])
-                    : Convert.ToInt32(context[_attributes["offset"]])
+                    : Convert.ToInt32(await context.GetAsync(_attributes["offset"]))
                 : 0;
 
-            int? limit = _attributes.ContainsKey("limit") ? (int?)Convert.ToInt32(context[_attributes["limit"]]) : null;
+            int? limit = _attributes.ContainsKey("limit") ? (int?)Convert.ToInt32(await context.GetAsync(_attributes["limit"])) : null;
             int? to = (limit != null) ? (int?)(limit.Value + from) : null;
 
             List<object> segment = SliceCollectionUsingEach(context, collection, from, to);
@@ -149,12 +150,12 @@ namespace DotLiquid.Tags
             // Store our progress through the collection for the continue flag
             register[_name] = from + length;
 
-            context.Stack(() =>
+            await context.StackAsync(async () =>
             {
                 if (!segment.Any())
                 {
                     if (ElseBlock != null)
-                        RenderAll(ElseBlock.Attachment, context, result);
+                        await RenderAllAsync(ElseBlock.Attachment, context, result);
                     return;
                 }
 
@@ -164,13 +165,13 @@ namespace DotLiquid.Tags
 
                     var item = segment[index];
                     if (context.SyntaxCompatibilityLevel < SyntaxCompatibility.DotLiquid22 && item is KeyValuePair<string, object> pair && pair.Value is IDictionary<string, object> valueDict)
-                        context[_variableName] = new LegacyKeyValueDrop(pair.Key, valueDict);
+                        context.Set(_variableName, new LegacyKeyValueDrop(pair.Key, valueDict));
                     else
-                        context[_variableName] = item;
+                        context.Set(_variableName, item);
 
                     // Ensure the 'for-loop' object is available to templates.
                     // See: https://shopify.dev/api/liquid/objects/for-loops
-                    context["forloop"] = new Dictionary<string, object>
+                    context.Set("forloop", new Dictionary<string, object>
                     {
                         ["name"] = _name,
                         ["length"] = length,
@@ -180,11 +181,11 @@ namespace DotLiquid.Tags
                         ["rindex0"] = length - index - 1,
                         ["first"] = (index == 0),
                         ["last"] = (index == length - 1)
-                    };
+                    });
 
                     try
                     {
-                        RenderAll(ForBlock, context, result);
+                        await RenderAllAsync(ForBlock, context, result);
                     }
                     catch (BreakInterrupt)
                     {

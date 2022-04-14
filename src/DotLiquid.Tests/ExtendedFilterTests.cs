@@ -21,7 +21,7 @@ namespace DotLiquid.Tests
         }
 
         [Test]
-        public void TestTitleize()
+        public async Task TestTitleize()
         {
             var context = _context;
             Assert.AreEqual(null, ExtendedFilters.Titleize(context: context, input: null));
@@ -29,13 +29,13 @@ namespace DotLiquid.Tests
             Assert.AreEqual(" ", ExtendedFilters.Titleize(context: context, input: " "));
             Assert.AreEqual("That Is One Sentence.", ExtendedFilters.Titleize(context: context, input: "That is one sentence."));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "Title",
                 template: "{{ 'title' | titleize }}");
         }
 
         [Test]
-        public void TestUpcaseFirst()
+        public async Task TestUpcaseFirst()
         {
             var context = _context;
             Assert.AreEqual(null, ExtendedFilters.UpcaseFirst(context: context, input: null));
@@ -43,7 +43,7 @@ namespace DotLiquid.Tests
             Assert.AreEqual(" ", ExtendedFilters.UpcaseFirst(context: context, input: " "));
             Assert.AreEqual(" My boss is Mr. Doe.", ExtendedFilters.UpcaseFirst(context: context, input: " my boss is Mr. Doe."));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "My great title",
                 template: "{{ 'my great title' | upcase_first }}");
         }

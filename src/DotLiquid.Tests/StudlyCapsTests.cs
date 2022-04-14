@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using DotLiquid.Exceptions;
 using DotLiquid.NamingConventions;
+using System.Threading.Tasks;
 
 namespace DotLiquid.Tests
 {
@@ -8,22 +9,22 @@ namespace DotLiquid.Tests
     public class StudlyCapsTests
     {
         [Test]
-        public void TestSimpleVariablesStudlyCaps()
+        public async Task TestSimpleVariablesStudlyCaps()
         {
             var template = "{{ Greeting }} {{ Name }}";
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "Hello Tobi",
                 template: template,
                 anonymousObject: new { greeting = "Hello", name = "Tobi" },
                 namingConvention: new RubyNamingConvention());
 
             var csNamingConvention = new CSharpNamingConvention();
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "Hello Tobi",
                 template: template,
                 anonymousObject: new { Greeting = "Hello", Name = "Tobi" },
                 namingConvention: csNamingConvention);
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: " ",
                 template: template,
                 anonymousObject: new { greeting = "Hello", name = "Tobi" },
@@ -50,30 +51,30 @@ namespace DotLiquid.Tests
         }
 
         [Test]
-        public void TestFiltersStudlyCapsAreNotAllowed()
+        public async Task TestFiltersStudlyCapsAreNotAllowed()
         {
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected:"HI TOBI",
                 template: "{{ 'hi tobi' | upcase }}",
                 namingConvention: new RubyNamingConvention());
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "HI TOBI",
                 template: "{{ 'hi tobi' | Upcase }}",
                 namingConvention: new CSharpNamingConvention());
         }
 
         [Test]
-        public void TestAssignsStudlyCaps()
+        public async Task TestAssignsStudlyCaps()
         {
             var rubyNamingConvention = new RubyNamingConvention();
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: ".foo.",
                 template: "{% assign FoO = values %}.{{ fOo[0] }}.",
                 anonymousObject: new { values = new[] { "foo", "bar", "baz" } },
                 namingConvention: rubyNamingConvention);
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: ".bar.",
                 template: "{% assign fOo = values %}.{{ fOO[1] }}.",
                 anonymousObject: new { values = new[] { "foo", "bar", "baz" } },
@@ -81,12 +82,12 @@ namespace DotLiquid.Tests
 
             var csNamingConvention = new CSharpNamingConvention();
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: ".foo.",
                 template: "{% assign Foo = values %}.{{ Foo[0] }}.",
                 anonymousObject: new { values = new[] { "foo", "bar", "baz" } },
                 namingConvention: csNamingConvention);
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: ".bar.",
                 template: "{% assign fOo = values %}.{{ fOo[1] }}.",
                 anonymousObject: new { values = new[] { "foo", "bar", "baz" } },

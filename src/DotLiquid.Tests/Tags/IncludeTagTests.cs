@@ -4,6 +4,7 @@ using DotLiquid.FileSystems;
 using NUnit.Framework;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Threading.Tasks;
 
 namespace DotLiquid.Tests.Tags
 {
@@ -12,9 +13,9 @@ namespace DotLiquid.Tests.Tags
     {
         private class TestFileSystem : IFileSystem
         {
-            public string ReadTemplateFile(Context context, string templateName)
+            public async Task<string> ReadTemplateFileAsync(Context context, string templateName)
             {
-                string templatePath = (string) context[templateName];
+                string templatePath = (string) await context.GetAsync(templateName);
 
                 switch (templatePath)
                 {
@@ -60,12 +61,12 @@ namespace DotLiquid.Tests.Tags
                 _baseFileSystem = baseFileSystem;
             }
 
-            public string ReadTemplateFile(Context context, string templateName)
+            public Task<string> ReadTemplateFileAsync(Context context, string templateName)
             {
-                return _baseFileSystem.ReadTemplateFile(context, templateName);
+                return _baseFileSystem.ReadTemplateFileAsync(context, templateName);
             }
 
-            public Template GetTemplate(Context context, string templateName)
+            public async Task<Template> GetTemplateAsync(Context context, string templateName)
             {
                 Template template;
                 if (_templateCache.TryGetValue(templateName, out template))
@@ -73,7 +74,7 @@ namespace DotLiquid.Tests.Tags
                     ++_cacheHitTimes;
                     return template;
                 }
-                var result = ReadTemplateFile(context, templateName);
+                var result = await ReadTemplateFileAsync(context, templateName);
                 template = Template.Parse(result);
                 _templateCache[templateName] = template;
                 return template;
@@ -82,17 +83,17 @@ namespace DotLiquid.Tests.Tags
 
         private class OtherFileSystem : IFileSystem
         {
-            public string ReadTemplateFile(Context context, string templateName)
+            public Task<string> ReadTemplateFileAsync(Context context, string templateName)
             {
-                return "from OtherFileSystem";
+                return Task.FromResult("from OtherFileSystem");
             }
         }
 
         private class InfiniteFileSystem : IFileSystem
         {
-            public string ReadTemplateFile(Context context, string templateName)
+            public Task<string> ReadTemplateFileAsync(Context context, string templateName)
             {
-                return "-{% include 'loop' %}";
+                return Task.FromResult("-{% include 'loop' %}");
             }
         }
 
@@ -106,68 +107,68 @@ namespace DotLiquid.Tests.Tags
         public void TestIncludeTagMustNotBeConsideredError()
         {
             Assert.AreEqual(0, Template.Parse("{% include 'product_template' %}").Errors.Count);
-            Assert.DoesNotThrow(() => Template.Parse("{% include 'product_template' %}").Render(new RenderParameters(CultureInfo.InvariantCulture) { RethrowErrors = true }));
+            Assert.DoesNotThrowAsync(async () => await Template.Parse("{% include 'product_template' %}").RenderAsync(new RenderParameters(CultureInfo.InvariantCulture) { RethrowErrors = true }));
         }
 
         [Test]
-        public void TestIncludeTagLooksForFileSystemInRegistersFirst()
+        public async Task TestIncludeTagLooksForFileSystemInRegistersFirst()
         {
-            Assert.AreEqual("from OtherFileSystem", Template.Parse("{% include 'pick_a_source' %}").Render(new RenderParameters(CultureInfo.InvariantCulture) { Registers = Hash.FromAnonymousObject(new { file_system = new OtherFileSystem() }) }));
+            Assert.AreEqual("from OtherFileSystem", await Template.Parse("{% include 'pick_a_source' %}").RenderAsync(new RenderParameters(CultureInfo.InvariantCulture) { Registers = Hash.FromAnonymousObject(new { file_system = new OtherFileSystem() }) }));
         }
 
         [Test]
-        public void TestIncludeTagWith()
+        public async Task TestIncludeTagWith()
         {
-            Assert.AreEqual("Product: Draft 151cm ", Template.Parse("{% include 'product' with products[0] %}").Render(Hash.FromAnonymousObject(new { products = new[] { Hash.FromAnonymousObject(new { title = "Draft 151cm" }), Hash.FromAnonymousObject(new { title = "Element 155cm" }) } })));
+            Assert.AreEqual("Product: Draft 151cm ", await Template.Parse("{% include 'product' with products[0] %}").RenderAsync(Hash.FromAnonymousObject(new { products = new[] { Hash.FromAnonymousObject(new { title = "Draft 151cm" }), Hash.FromAnonymousObject(new { title = "Element 155cm" }) } })));
         }
 
         [Test]
-        public void TestIncludeTagWithDefaultName()
+        public async Task TestIncludeTagWithDefaultName()
         {
-            Assert.AreEqual("Product: Draft 151cm ", Template.Parse("{% include 'product' %}").Render(Hash.FromAnonymousObject(new { product = Hash.FromAnonymousObject(new { title = "Draft 151cm" }) })));
+            Assert.AreEqual("Product: Draft 151cm ", await Template.Parse("{% include 'product' %}").RenderAsync(Hash.FromAnonymousObject(new { product = Hash.FromAnonymousObject(new { title = "Draft 151cm" }) })));
         }
 
         [Test]
-        public void TestIncludeTagFor()
+        public async Task TestIncludeTagFor()
         {
-            Assert.AreEqual("Product: Draft 151cm Product: Element 155cm ", Template.Parse("{% include 'product' for products %}").Render(Hash.FromAnonymousObject(new { products = new[] { Hash.FromAnonymousObject(new { title = "Draft 151cm" }), Hash.FromAnonymousObject(new { title = "Element 155cm" }) } })));
+            Assert.AreEqual("Product: Draft 151cm Product: Element 155cm ", await Template.Parse("{% include 'product' for products %}").RenderAsync(Hash.FromAnonymousObject(new { products = new[] { Hash.FromAnonymousObject(new { title = "Draft 151cm" }), Hash.FromAnonymousObject(new { title = "Element 155cm" }) } })));
         }
 
         [Test]
-        public void TestIncludeTagWithLocalVariables()
+        public async Task TestIncludeTagWithLocalVariables()
         {
-            Assert.AreEqual("Locale: test123 ", Template.Parse("{% include 'locale_variables' echo1: 'test123' %}").Render());
+            Assert.AreEqual("Locale: test123 ", await Template.Parse("{% include 'locale_variables' echo1: 'test123' %}").RenderAsync());
         }
 
         [Test]
-        public void TestIncludeTagWithMultipleLocalVariables()
+        public async Task TestIncludeTagWithMultipleLocalVariables()
         {
-            Assert.AreEqual("Locale: test123 test321", Template.Parse("{% include 'locale_variables' echo1: 'test123', echo2: 'test321' %}").Render());
+            Assert.AreEqual("Locale: test123 test321", await Template.Parse("{% include 'locale_variables' echo1: 'test123', echo2: 'test321' %}").RenderAsync());
         }
 
         [Test]
-        public void TestIncludeTagWithMultipleLocalVariablesFromContext()
+        public async Task TestIncludeTagWithMultipleLocalVariablesFromContext()
         {
             Assert.AreEqual("Locale: test123 test321",
-                Template.Parse("{% include 'locale_variables' echo1: echo1, echo2: more_echos.echo2 %}").Render(Hash.FromAnonymousObject(new { echo1 = "test123", more_echos = Hash.FromAnonymousObject(new { echo2 = "test321" }) })));
+                await Template.Parse("{% include 'locale_variables' echo1: echo1, echo2: more_echos.echo2 %}").RenderAsync(Hash.FromAnonymousObject(new { echo1 = "test123", more_echos = Hash.FromAnonymousObject(new { echo2 = "test321" }) })));
         }
 
         [Test]
-        public void TestNestedIncludeTag()
+        public async Task TestNestedIncludeTag()
         {
-            Assert.AreEqual("body body_detail", Template.Parse("{% include 'body' %}").Render());
+            Assert.AreEqual("body body_detail", await Template.Parse("{% include 'body' %}").RenderAsync());
 
-            Assert.AreEqual("header body body_detail footer", Template.Parse("{% include 'nested_template' %}").Render());
+            Assert.AreEqual("header body body_detail footer", await Template.Parse("{% include 'nested_template' %}").RenderAsync());
         }
 
         [Test]
-        public void TestNestedIncludeTagWithVariable()
+        public async Task TestNestedIncludeTagWithVariable()
         {
             Assert.AreEqual("Product: Draft 151cm details ",
-                Template.Parse("{% include 'nested_product_template' with product %}").Render(Hash.FromAnonymousObject(new { product = Hash.FromAnonymousObject(new { title = "Draft 151cm" }) })));
+                await Template.Parse("{% include 'nested_product_template' with product %}").RenderAsync(Hash.FromAnonymousObject(new { product = Hash.FromAnonymousObject(new { title = "Draft 151cm" }) })));
 
             Assert.AreEqual("Product: Draft 151cm details Product: Element 155cm details ",
-                Template.Parse("{% include 'nested_product_template' for products %}").Render(Hash.FromAnonymousObject(new { products = new[] { Hash.FromAnonymousObject(new { title = "Draft 151cm" }), Hash.FromAnonymousObject(new { title = "Element 155cm" }) } })));
+                await Template.Parse("{% include 'nested_product_template' for products %}").RenderAsync(Hash.FromAnonymousObject(new { products = new[] { Hash.FromAnonymousObject(new { title = "Draft 151cm" }), Hash.FromAnonymousObject(new { title = "Element 155cm" }) } })));
         }
 
         [Test]
@@ -175,29 +176,29 @@ namespace DotLiquid.Tests.Tags
         {
             Template.FileSystem = new InfiniteFileSystem();
 
-            Assert.Throws<StackLevelException>(() => Template.Parse("{% include 'loop' %}").Render(new RenderParameters(CultureInfo.InvariantCulture) { RethrowErrors = true }));
+            Assert.ThrowsAsync<StackLevelException>(async () => await Template.Parse("{% include 'loop' %}").RenderAsync(new RenderParameters(CultureInfo.InvariantCulture) { RethrowErrors = true }));
         }
 
         [Test]
-        public void TestDynamicallyChosenTemplate()
+        public async Task TestDynamicallyChosenTemplate()
         {
-            Assert.AreEqual("Test123", Template.Parse("{% include template %}").Render(Hash.FromAnonymousObject(new { template = "Test123" })));
-            Assert.AreEqual("Test321", Template.Parse("{% include template %}").Render(Hash.FromAnonymousObject(new { template = "Test321" })));
+            Assert.AreEqual("Test123", await Template.Parse("{% include template %}").RenderAsync(Hash.FromAnonymousObject(new { template = "Test123" })));
+            Assert.AreEqual("Test321", await Template.Parse("{% include template %}").RenderAsync(Hash.FromAnonymousObject(new { template = "Test321" })));
 
-            Assert.AreEqual("Product: Draft 151cm ", Template.Parse("{% include template for product %}").Render(Hash.FromAnonymousObject(new { template = "product", product = Hash.FromAnonymousObject(new { title = "Draft 151cm" }) })));
+            Assert.AreEqual("Product: Draft 151cm ", await Template.Parse("{% include template for product %}").RenderAsync(Hash.FromAnonymousObject(new { template = "product", product = Hash.FromAnonymousObject(new { title = "Draft 151cm" }) })));
         }
 
         [Test]
-        public void TestUndefinedTemplateVariableWithTestFileSystem()
+        public async Task TestUndefinedTemplateVariableWithTestFileSystem()
         {
-            Assert.AreEqual(" hello  world ", Template.Parse(" hello {% include notthere %} world ").Render());
+            Assert.AreEqual(" hello  world ", await Template.Parse(" hello {% include notthere %} world ").RenderAsync());
         }
 
         [Test]
         public void TestUndefinedTemplateVariableWithLocalFileSystem()
         {
             Template.FileSystem = new LocalFileSystem(string.Empty);
-            Assert.Throws<FileSystemException>(() => Template.Parse(" hello {% include notthere %} world ").Render(new RenderParameters(CultureInfo.InvariantCulture)
+            Assert.ThrowsAsync<FileSystemException>(async () => await Template.Parse(" hello {% include notthere %} world ").RenderAsync(new RenderParameters(CultureInfo.InvariantCulture)
             {
                 RethrowErrors = true
             }));
@@ -207,20 +208,20 @@ namespace DotLiquid.Tests.Tags
         public void TestMissingTemplateWithLocalFileSystem()
         {
             Template.FileSystem = new LocalFileSystem(string.Empty);
-            Assert.Throws<FileSystemException>(() => Template.Parse(" hello {% include 'doesnotexist' %} world ").Render(new RenderParameters(CultureInfo.InvariantCulture)
+            Assert.ThrowsAsync<FileSystemException>(async () => await Template.Parse(" hello {% include 'doesnotexist' %} world ").RenderAsync(new RenderParameters(CultureInfo.InvariantCulture)
             {
                 RethrowErrors = true
             }));
         }
 
         [Test]
-        public void TestIncludeFromTemplateFileSystem()
+        public async Task TestIncludeFromTemplateFileSystem()
         {
             var fileSystem = new TestTemplateFileSystem(new TestFileSystem());
             Template.FileSystem = fileSystem;
             for (int i = 0; i < 2; ++i)
             {
-                Assert.AreEqual("Product: Draft 151cm ", Template.Parse("{% include 'product' with products[0] %}").Render(Hash.FromAnonymousObject(new { products = new[] { Hash.FromAnonymousObject(new { title = "Draft 151cm" }), Hash.FromAnonymousObject(new { title = "Element 155cm" }) } })));
+                Assert.AreEqual("Product: Draft 151cm ", await Template.Parse("{% include 'product' with products[0] %}").RenderAsync(Hash.FromAnonymousObject(new { products = new[] { Hash.FromAnonymousObject(new { title = "Draft 151cm" }), Hash.FromAnonymousObject(new { title = "Element 155cm" }) } })));
             }
             Assert.AreEqual(fileSystem.CacheHitTimes, 1);
         }

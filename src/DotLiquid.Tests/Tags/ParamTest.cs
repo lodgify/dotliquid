@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Threading.Tasks;
 using DotLiquid.Exceptions;
 using DotLiquid.Tags;
 using NUnit.Framework;
@@ -32,40 +33,40 @@ namespace DotLiquid.Tests.Tags
             tag.Initialize(tagName: "param", markup: markup, tokens: null);
 
             var context = new Context(new CultureInfo("en-US"));
-            Assert.Throws<SyntaxException>(() => tag.Render(context, new StringWriter()));
+            Assert.ThrowsAsync<SyntaxException>(async () => await tag.RenderAsync(context, new StringWriter()));
         }
 
         [Test]
-        public void TestSyntaxCompatibility()
+        public async Task TestSyntaxCompatibility()
         {
             // Initialize as DotLiquid20, then assert that the DotLiquid21 rules for Capitalize are followed.
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "My great title",
                 template: "{% param Syntax= 'DotLiquid21'%}{{ 'my great title' | capitalize }}",
                 syntax: SyntaxCompatibility.DotLiquid20);
         }
 
         [Test]
-        public void TestDateFormats()
+        public async Task TestDateFormats()
         {
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: ".NET=2020, Ruby=2020, .NET=2020",
                 template: ".NET={{sourceDate | date: 'yyyy'}}{%param date_format='ruBy'%}, Ruby={{sourceDate | date: '%Y'}}{%param DATEFORMAT = 'dotnet'%}, .NET={{sourceDate | date: 'yyyy'}}",
                 localVariables: Hash.FromAnonymousObject(new { sourceDate = "2020-02-03T12:13:14Z" }));
         }
 
         [Test]
-        public void TestCulture()
+        public async Task TestCulture()
         {
             using (CultureHelper.SetCulture("en-US")) // Pre-select a thread culture for Before value (jp-JP)
             {
-                Helper.AssertTemplateResult(
+                await Helper.AssertTemplateResultAsync(
                     expected: "Before=$1,000.50, After=£1,000.50",
                     template: "Before={{ amount | currency }}{% param culture=cultureValue%}, After={{ amount | currency }}",
                     localVariables: Hash.FromAnonymousObject(new { amount = 1000.4999d, cultureValue = "en-GB" })
                 );
 
-                Helper.AssertTemplateResult(
+                await Helper.AssertTemplateResultAsync(
                     expected: "Before=$1,000.50, After=¤1,000.50",
                     template: "Before={{ amount | currency }}{% param culture=cultureValue%}, After={{ amount | currency }}",
                     localVariables: Hash.FromAnonymousObject(new { amount = 1000.4999d, cultureValue = "" }) // ""=InvariantCulture
@@ -74,22 +75,22 @@ namespace DotLiquid.Tests.Tags
         }
 
         [Test]
-        public void TestCulture_InvalidCulture()
+        public async Task TestCulture_InvalidCulture()
         {
             // Ensure the default/thread culture is 'en-US'
             using (CultureHelper.SetCulture("en-US"))
             {
-                Helper.AssertTemplateResult(
+                await Helper.AssertTemplateResultAsync(
                     expected: "Liquid syntax error: Culture 'xxx-YYY' is not supported$7,000.00",
                     template: "{% param culture='xxx-YYY'%}{{ 7000 | currency }}"); // Unknown culture
             }
         }
 
         [Test]
-        public void TestUsing()
+        public async Task TestUsing()
         {
             // using param is not included, so verify the value is not hashed.
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: @"
 Before: ShopifyIsAwesome!
 After:  c7322e3812d3da7bc621300ca1797517c34f63b6",

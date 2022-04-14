@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using DotLiquid.Exceptions;
 
 namespace DotLiquid.FileSystems
@@ -29,9 +30,9 @@ namespace DotLiquid.FileSystems
             Root = root;
         }
 
-        public string ReadTemplateFile(Context context, string templateName)
+        public async Task<string> ReadTemplateFileAsync(Context context, string templateName)
         {
-            var templatePath = (string)context[templateName];
+            var templatePath = (string) await context.GetAsync(templateName);
             var fullPath = FullPath(templatePath);
 
             var stream = Assembly.GetManifestResourceStream(fullPath);

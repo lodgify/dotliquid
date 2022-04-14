@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using NUnit.Framework;
 
 namespace DotLiquid.Tests
@@ -59,7 +60,7 @@ namespace DotLiquid.Tests
         }
 
         [Test]
-        public void TestTruncate()
+        public async Task TestTruncate()
         {
             Assert.AreEqual(expected: null, actual: StandardFilters.Truncate(null));
             Assert.AreEqual(expected: "", actual: StandardFilters.Truncate(""));
@@ -67,35 +68,35 @@ namespace DotLiquid.Tests
             Assert.AreEqual(expected: "1234567890", actual: StandardFilters.Truncate("1234567890", 20));
             Assert.AreEqual(expected: "...", actual: StandardFilters.Truncate("1234567890", 0));
             Assert.AreEqual(expected: "1234567890", actual: StandardFilters.Truncate("1234567890"));
-            Helper.AssertTemplateResult(expected: "H...", template: "{{ 'Hello' | truncate:4 }}");
+            await Helper.AssertTemplateResultAsync(expected: "H...", template: "{{ 'Hello' | truncate:4 }}");
 
-            Helper.AssertTemplateResult(expected: "Ground control to...", template: "{{ \"Ground control to Major Tom.\" | truncate: 20}}");
-            Helper.AssertTemplateResult(expected: "Ground control, and so on", template: "{{ \"Ground control to Major Tom.\" | truncate: 25, \", and so on\"}}");
-            Helper.AssertTemplateResult(expected: "Ground control to Ma", template: "{{ \"Ground control to Major Tom.\" | truncate: 20, \"\"}}");
-            Helper.AssertTemplateResult(expected: "...", template: "{{ \"Ground control to Major Tom.\" | truncate: 0}}");
-            Helper.AssertTemplateResult(expected: "Liquid error: Value was either too large or too small for an Int32.", template: $"{{{{ \"Ground control to Major Tom.\" | truncate: {((long)int.MaxValue) + 1}}}}}");
-            Helper.AssertTemplateResult(expected: "...", template: "{{ \"Ground control to Major Tom.\" | truncate: -1}}");
+            await Helper.AssertTemplateResultAsync(expected: "Ground control to...", template: "{{ \"Ground control to Major Tom.\" | truncate: 20}}");
+            await Helper.AssertTemplateResultAsync(expected: "Ground control, and so on", template: "{{ \"Ground control to Major Tom.\" | truncate: 25, \", and so on\"}}");
+            await Helper.AssertTemplateResultAsync(expected: "Ground control to Ma", template: "{{ \"Ground control to Major Tom.\" | truncate: 20, \"\"}}");
+            await Helper.AssertTemplateResultAsync(expected: "...", template: "{{ \"Ground control to Major Tom.\" | truncate: 0}}");
+            await Helper.AssertTemplateResultAsync(expected: "Liquid error: Value was either too large or too small for an Int32.", template: $"{{{{ \"Ground control to Major Tom.\" | truncate: {((long)int.MaxValue) + 1}}}}}");
+            await Helper.AssertTemplateResultAsync(expected: "...", template: "{{ \"Ground control to Major Tom.\" | truncate: -1}}");
         }
 
         [Test]
-        public void TestEscape()
+        public async Task TestEscape()
         {
             Assert.AreEqual(null, StandardFilters.Escape(null));
             Assert.AreEqual("", StandardFilters.Escape(""));
             Assert.AreEqual("&lt;strong&gt;", StandardFilters.Escape("<strong>"));
             Assert.AreEqual("&lt;strong&gt;", StandardFilters.H("<strong>"));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                  expected: "Have you read &#39;James &amp; the Giant Peach&#39;?",
                  template: @"{{ ""Have you read 'James & the Giant Peach'?"" | escape }}");
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                  expected: "Tetsuro Takara",
                  template: "{{ 'Tetsuro Takara' | escape }}");
         }
 
         [Test]
-        public void TestEscapeOnce()
+        public async Task TestEscapeOnce()
         {
             Assert.AreEqual(null, StandardFilters.EscapeOnce(null));
             Assert.AreEqual("", StandardFilters.EscapeOnce(""));
@@ -103,17 +104,17 @@ namespace DotLiquid.Tests
             Assert.AreEqual("1 &lt; 2 &amp; 3", StandardFilters.EscapeOnce("1 &lt; 2 &amp; 3"));
             Assert.AreEqual("&lt;element&gt;1 &lt; 2 &amp; 3&lt;/element&gt;", StandardFilters.EscapeOnce("<element>1 &lt; 2 &amp; 3</element>"));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                  expected: "1 &lt; 2 &amp; 3",
                  template: "{{ '1 < 2 & 3' | escape_once }}");
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                  expected: "1 &lt; 2 &amp; 3",
                  template: "{{ '1 &lt; 2 &amp; 3' | escape_once }}");
         }
 
         [Test]
-        public void TestTruncateWords()
+        public async Task TestTruncateWords()
         {
             Assert.AreEqual(null, StandardFilters.TruncateWords(null));
             Assert.AreEqual("", StandardFilters.TruncateWords(""));
@@ -122,12 +123,12 @@ namespace DotLiquid.Tests
             Assert.AreEqual("one two three", StandardFilters.TruncateWords("one two three"));
             Assert.AreEqual("Two small (13&#8221; x 5.5&#8221; x 10&#8221; high) baskets fit inside one large basket (13&#8221;...", StandardFilters.TruncateWords("Two small (13&#8221; x 5.5&#8221; x 10&#8221; high) baskets fit inside one large basket (13&#8221; x 16&#8221; x 10.5&#8221; high) with cover.", 15));
 
-            Helper.AssertTemplateResult(expected: "Ground control to...", template: "{{ \"Ground control to Major Tom.\" | truncate_words: 3}}");
-            Helper.AssertTemplateResult(expected: "Ground control to--", template: "{{ \"Ground control to Major Tom.\" | truncate_words: 3, \"--\"}}");
-            Helper.AssertTemplateResult(expected: "Ground control to", template: "{{ \"Ground control to Major Tom.\" | truncate_words: 3, \"\"}}");
-            Helper.AssertTemplateResult(expected: "...", template: "{{ \"Ground control to Major Tom.\" | truncate_words: 0}}");
-            Helper.AssertTemplateResult(expected: "...", template: "{{ \"Ground control to Major Tom.\" | truncate_words: -1}}");
-            Helper.AssertTemplateResult(expected: "Liquid error: Value was either too large or too small for an Int32.", template: $"{{{{ \"Ground control to Major Tom.\" | truncate_words: {((long)int.MaxValue) + 1}}}}}");
+            await Helper.AssertTemplateResultAsync(expected: "Ground control to...", template: "{{ \"Ground control to Major Tom.\" | truncate_words: 3}}");
+            await Helper.AssertTemplateResultAsync(expected: "Ground control to--", template: "{{ \"Ground control to Major Tom.\" | truncate_words: 3, \"--\"}}");
+            await Helper.AssertTemplateResultAsync(expected: "Ground control to", template: "{{ \"Ground control to Major Tom.\" | truncate_words: 3, \"\"}}");
+            await Helper.AssertTemplateResultAsync(expected: "...", template: "{{ \"Ground control to Major Tom.\" | truncate_words: 0}}");
+            await Helper.AssertTemplateResultAsync(expected: "...", template: "{{ \"Ground control to Major Tom.\" | truncate_words: -1}}");
+            await Helper.AssertTemplateResultAsync(expected: "Liquid error: Value was either too large or too small for an Int32.", template: $"{{{{ \"Ground control to Major Tom.\" | truncate_words: {((long)int.MaxValue) + 1}}}}}");
         }
 
         [Test]
@@ -278,22 +279,22 @@ namespace DotLiquid.Tests
         }
 
         [Test]
-        public void TestSliceShopifySamples()
+        public async Task TestSliceShopifySamples()
         {
             // Test from Liquid specification at https://shopify.github.io/liquid/filters/slice/
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: @"
 PaulGeorge",
                 template: @"{% assign beatles = 'John, Paul, George, Ringo' | split: ', ' %}
 {{ beatles | slice: 1, 2 }}");
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "ui",
                 template: "{{ 'Liquid' | slice: -3, 2 }}");
         }
 
         [Test]
-        public void TestJoin()
+        public async Task TestJoin()
         {
             Assert.AreEqual(null, StandardFilters.Join(null));
             Assert.AreEqual("", StandardFilters.Join(""));
@@ -301,7 +302,7 @@ PaulGeorge",
             Assert.AreEqual("1 - 2 - 3 - 4", StandardFilters.Join(new[] { 1, 2, 3, 4 }, " - "));
 
             // Sample from specification at https://shopify.github.io/liquid/filters/join/
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "\r\nJohn and Paul and George and Ringo",
                 template: @"{% assign beatles = ""John, Paul, George, Ringo"" | split: "", "" %}
 {{ beatles | join: "" and "" }}");
@@ -422,12 +423,12 @@ PaulGeorge",
             };
 
         [Test]
-        public void TestMap()
+        public async Task TestMap()
         {
-            CollectionAssert.AreEqual(new string[] { }, StandardFilters.Map(new string[] { }, "a"));
+            CollectionAssert.AreEqual(new string[] { }, await StandardFilters.MapAsync(new string[] { }, "a"));
             CollectionAssert.AreEqual(new[] { 1, 2, 3, 4 },
-                StandardFilters.Map(new[] { new { a = 1 }, new { a = 2 }, new { a = 3 }, new { a = 4 } }, "a"));
-            Helper.AssertTemplateResult("abc", "{{ ary | map:'foo' | map:'bar' }}",
+                await StandardFilters.MapAsync(new[] { new { a = 1 }, new { a = 2 }, new { a = 3 }, new { a = 4 } }, "a"));
+            await Helper.AssertTemplateResultAsync("abc", "{{ ary | map:'foo' | map:'bar' }}",
                 Hash.FromAnonymousObject(
                     new
                     {
@@ -439,10 +440,10 @@ PaulGeorge",
                     }
                     }));
             CollectionAssert.AreEqual(new[] { new { a = 1 }, new { a = 2 }, new { a = 3 }, new { a = 4 } },
-                StandardFilters.Map(new[] { new { a = 1 }, new { a = 2 }, new { a = 3 }, new { a = 4 } }, "b"));
+                await StandardFilters.MapAsync(new[] { new { a = 1 }, new { a = 2 }, new { a = 3 }, new { a = 4 } }, "b"));
 
-            Assert.AreEqual(null, StandardFilters.Map(null, "a"));
-            CollectionAssert.AreEqual(new object[] { null }, StandardFilters.Map(new object[] { null }, "a"));
+            Assert.AreEqual(null, await StandardFilters.MapAsync(null, "a"));
+            CollectionAssert.AreEqual(new object[] { null }, await StandardFilters.MapAsync(new object[] { null }, "a"));
 
             var hash = Hash.FromAnonymousObject(new
             {
@@ -453,8 +454,8 @@ PaulGeorge",
                 }
             });
 
-            Helper.AssertTemplateResult("abc", "{{ ary | map:'prop_allowed' | join:'' }}", hash);
-            Helper.AssertTemplateResult("", "{{ ary | map:'prop_disallowed' | join:'' }}", hash);
+            await Helper.AssertTemplateResultAsync("abc", "{{ ary | map:'prop_allowed' | join:'' }}", hash);
+            await Helper.AssertTemplateResultAsync("", "{{ ary | map:'prop_disallowed' | join:'' }}", hash);
 
             hash = Hash.FromAnonymousObject(new
             {
@@ -465,8 +466,8 @@ PaulGeorge",
                 }
             });
 
-            Helper.AssertTemplateResult("abc", "{{ ary | map:'prop' | join:'' }}", hash);
-            Helper.AssertTemplateResult("", "{{ ary | map:'no_prop' | join:'' }}", hash);
+            await Helper.AssertTemplateResultAsync("abc", "{{ ary | map:'prop' | join:'' }}", hash);
+            await Helper.AssertTemplateResultAsync("", "{{ ary | map:'no_prop' | join:'' }}", hash);
         }
 
         /// <summary>
@@ -474,7 +475,7 @@ PaulGeorge",
         /// </summary>
         /// <remarks><see href="https://shopify.github.io/liquid/filters/map/"/></remarks>
         [Test]
-        public void TestMapSpecificationSample()
+        public async Task TestMapSpecificationSample()
         {
             var hash = Hash.FromAnonymousObject(new
             {
@@ -490,7 +491,7 @@ PaulGeorge",
                 }
             });
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "\r\n- business\r\n\r\n- celebrities\r\n\r\n- lifestyle\r\n\r\n- sports\r\n\r\n- technology\r\n",
                 template: @"{% assign all_categories = site.pages | map: ""category"" %}{% for item in all_categories %}
 - {{ item }}
@@ -503,7 +504,7 @@ PaulGeorge",
         /// </summary>
         /// <remarks>In this variant of the test we add another property to the items in the collection to ensure the map filter does its job of removing other properties</remarks>
         [Test]
-        public void TestMapSpecificationSampleVariant()
+        public async Task TestMapSpecificationSampleVariant()
         {
             var hash = Hash.FromAnonymousObject(new
             {
@@ -519,7 +520,7 @@ PaulGeorge",
                 }
             });
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "\r\n- business\r\n\r\n- celebrities\r\n\r\n- lifestyle\r\n\r\n- sports\r\n\r\n- technology\r\n",
                 template: @"{% assign all_categories = site.pages | map: ""category"" %}{% for item in all_categories %}
 - {{ item }}
@@ -527,7 +528,7 @@ PaulGeorge",
         }
 
         [Test]
-        public void TestMapShipmentPackage()
+        public async Task TestMapShipmentPackage()
         {
             var hash = Hash.FromAnonymousObject(new
             {
@@ -548,7 +549,7 @@ PaulGeorge",
                 }
             });
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "{\r\n\r\n\"tests\" : [\r\n            {\r\n                \"numberOfPiecesPerPackage\" : \"10\"\r\n      },\r\n      \r\n            {\r\n                \"numberOfPiecesPerPackage\" : \"12\"\r\n      },\r\n      ]\r\n}",
                 template: @"{
 {% assign test1 = content.carrierSettings | map: ""numberOfPiecesPerPackage"" %}
@@ -560,7 +561,7 @@ PaulGeorge",
 }",
                 localVariables: hash);
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "{\r\n\r\n\"tests\" : 1012\r\n}",
                 template: @"{
 {% assign test1 = content.carrierSettings | map: ""numberOfPiecesPerPackage"" %}
@@ -581,11 +582,15 @@ PaulGeorge",
                 this.test = test;
             }
 
-            public object this[object key] => key as string == "numberOfPiecesPerPackage"
+            public async Task<object> GetAsync(object key)
+            {
+                var result = key as string == "numberOfPiecesPerPackage"
                 ? this.numberOfPiecesPerPackage as object
                 : key as string == "test"
                     ? test
                     : null;
+                return await Task.FromResult(result);
+            }
 
             public bool ContainsKey(object key)
             {
@@ -600,7 +605,7 @@ PaulGeorge",
         };
 
         [Test]
-        public void TestMapIndexable()
+        public async Task TestMapIndexable()
         {
             var hash = Hash.FromAnonymousObject(new
             {
@@ -614,7 +619,7 @@ PaulGeorge",
                 }
             });
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "{\r\n\r\n\"tests\" : [\r\n            {\r\n                \"numberOfPiecesPerPackage\" : \"10\"\r\n      },\r\n      \r\n            {\r\n                \"numberOfPiecesPerPackage\" : \"12\"\r\n      },\r\n      ]\r\n}",
                 template: @"{
 {% assign test1 = content.carrierSettings | map: ""numberOfPiecesPerPackage"" %}
@@ -626,7 +631,7 @@ PaulGeorge",
 }",
                 localVariables: hash);
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "{\r\n\r\n\"tests\" : 1012\r\n}",
                 template: @"{
 {% assign test1 = content.carrierSettings | map: ""numberOfPiecesPerPackage"" %}
@@ -636,7 +641,7 @@ PaulGeorge",
         }
 
         [Test]
-        public void TestMapJoin()
+        public async Task TestMapJoin()
         {
             var hash = Hash.FromAnonymousObject(new
             {
@@ -657,7 +662,7 @@ PaulGeorge",
                 }
             });
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "\r\n{ \"test\": \"10, 12\"}",
                 template: @"{% assign test = content.carrierSettings | map: ""numberOfPiecesPerPackage"" | join: "", ""%}
 { ""test"": ""{{test}}""}",
@@ -670,12 +675,12 @@ PaulGeorge",
         [TestCase("6000.4", "$6,000.40")]
         [TestCase("6000000.4", "$6,000,000.40")]
         [TestCase("6.8458", "$6.85")]
-        public void TestAmericanCurrencyFromString(string input, string expected)
+        public async Task TestAmericanCurrencyFromString(string input, string expected)
         {
             // Set the thread culture and test for backward compatibility
             using (CultureHelper.SetCulture("en-US"))
             {
-                Helper.AssertTemplateResult(
+                await Helper.AssertTemplateResultAsync(
                     expected: expected,
                     template: "{{ input | currency }}",
                     localVariables: Hash.FromAnonymousObject(new { input = input }));
@@ -699,12 +704,12 @@ PaulGeorge",
         [TestCase(7000, "¤7,000.00", " ")] // "" = InvariantCulture
         [TestCase(int.MaxValue, "2 147 483 647,00 €", "fr-FR")]
         [TestCase(long.MaxValue, "9 223 372 036 854 775 807,00 €", "fr")]
-        public void TestEuroCurrencyFromString(object input, string expected, string languageTag)
+        public async Task TestEuroCurrencyFromString(object input, string expected, string languageTag)
         {
             // Set the thread culture and test for backward compatibility
             using (CultureHelper.SetCulture("en-US"))
             {
-                Helper.AssertTemplateResult(
+                await Helper.AssertTemplateResultAsync(
                     expected: expected,
                     template: "{{ input | currency: languageTag }}",
                     localVariables: Hash.FromAnonymousObject(new { input = input, languageTag = languageTag }));
@@ -715,12 +720,12 @@ PaulGeorge",
         }
 
         [Test]
-        public void TestMalformedCurrency()
+        public async Task TestMalformedCurrency()
         {
             // Set the thread culture and test for backward compatibility
             using (CultureHelper.SetCulture("en-US"))
             {
-                Helper.AssertTemplateResult(
+                await Helper.AssertTemplateResultAsync(
                     expected: "teststring",
                     template: "{{ 'teststring' | currency: 'de-DE' }}");
             }
@@ -730,15 +735,15 @@ PaulGeorge",
         }
 
         [Test]
-        public void TestCurrencyWithinTemplateRender()
+        public async Task TestCurrencyWithinTemplateRender()
         {
             using (CultureHelper.SetCulture("en-US"))
             {
                 Template dollarTemplate = Template.Parse(@"{{ amount | currency }}");
                 Template euroTemplate = Template.Parse(@"{{ amount | currency: ""de-DE"" }}");
 
-                Assert.AreEqual("$7,000.00", dollarTemplate.Render(Hash.FromAnonymousObject(new { amount = "7000" })));
-                Assert.AreEqual("7.000,00 €", euroTemplate.Render(Hash.FromAnonymousObject(new { amount = 7000 })));
+                Assert.AreEqual("$7,000.00", await dollarTemplate.RenderAsync(Hash.FromAnonymousObject(new { amount = "7000" })));
+                Assert.AreEqual("7.000,00 €", await euroTemplate.RenderAsync(Hash.FromAnonymousObject(new { amount = 7000 })));
             }
         }
 
@@ -760,15 +765,15 @@ PaulGeorge",
         }
 
         [Test]
-        public void TestDate()
+        public async Task TestDate()
         {
-            Helper.LockTemplateStaticVars(Template.NamingConvention, () =>
+            await Helper.LockTemplateStaticVarsAsync(Template.NamingConvention, async () =>
             {
-                TestDate(_contextV20);
+                await TestDateAsync(_contextV20);
             });
         }
 
-        private void TestDate(Context context)
+        private async Task TestDateAsync(Context context)
         {
             context.UseRubyDateFormat = false;
             DateTimeFormatInfo dateTimeFormat = context.CurrentCulture.DateTimeFormat;
@@ -802,13 +807,13 @@ PaulGeorge",
             Assert.AreEqual("345000", StandardFilters.Date(context: context, input: DateTime.Parse("2006-05-05 10:00:00.345"), format: "ffffff"));
 
             Template template = Template.Parse(@"{{ hi | date:""MMMM"" }}");
-            Assert.AreEqual("hi", template.Render(Hash.FromAnonymousObject(new { hi = "hi" })));
+            Assert.AreEqual("hi", await template.RenderAsync(Hash.FromAnonymousObject(new { hi = "hi" })));
         }
 
         [Test]
-        public void TestDateV20()
+        public async Task TestDateV20()
         {
-            Helper.LockTemplateStaticVars(Template.NamingConvention, () =>
+            await Helper.LockTemplateStaticVarsAsync(Template.NamingConvention, async () =>
             {
                 var context = _contextV20;
                 // Legacy parser doesn't except Unix Epoch https://github.com/dotliquid/dotliquid/issues/322
@@ -823,69 +828,69 @@ PaulGeorge",
                 Liquid.UseRubyDateFormat = true; // ensure all Contexts created within tests are defaulted to Ruby date format
                 var unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).ToLocalTime();
                 var unixEpochOffset = new DateTimeOffset(unixEpoch).Offset.TotalSeconds;
-                Helper.AssertTemplateResult(expected: "0", template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = unixEpoch.ToUniversalTime() }));
-                Helper.AssertTemplateResult(expected: unixEpochOffset.ToString(), template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = unixEpoch }));
-                Helper.AssertTemplateResult(expected: unixEpochOffset.ToString(), template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = DateTime.SpecifyKind(unixEpoch.ToLocalTime(), DateTimeKind.Unspecified) }));
-                Helper.AssertTemplateResult(expected: unixEpochOffset.ToString(), template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = new DateTimeOffset(unixEpoch) }));
-                Helper.AssertTemplateResult(expected: unixEpochOffset.ToString(), template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = new DateTimeOffset(unixEpoch).ToOffset(TimeSpan.FromHours(-14)) }));
+                await Helper.AssertTemplateResultAsync(expected: "0", template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = unixEpoch.ToUniversalTime() }));
+                await Helper.AssertTemplateResultAsync(expected: unixEpochOffset.ToString(), template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = unixEpoch }));
+                await Helper.AssertTemplateResultAsync(expected: unixEpochOffset.ToString(), template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = DateTime.SpecifyKind(unixEpoch.ToLocalTime(), DateTimeKind.Unspecified) }));
+                await Helper.AssertTemplateResultAsync(expected: unixEpochOffset.ToString(), template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = new DateTimeOffset(unixEpoch) }));
+                await Helper.AssertTemplateResultAsync(expected: unixEpochOffset.ToString(), template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = new DateTimeOffset(unixEpoch).ToOffset(TimeSpan.FromHours(-14)) }));
 
                 // Legacy parser defaults to the .NET default format
                 Assert.AreEqual(DateTime.Now.ToString(context.CurrentCulture), StandardFilters.Date(context: context, input: "now", format: null));
                 Assert.AreEqual(DateTime.Now.ToString(context.CurrentCulture), StandardFilters.Date(context: context, input: "today", format: null));
                 Assert.AreEqual(DateTime.Now.ToString(context.CurrentCulture), StandardFilters.Date(context: context, input: "now", format: string.Empty));
-                Assert.AreEqual(DateTime.Now.ToString(context.CurrentCulture), StandardFilters.Date(context: context, input: "today", format: string.Empty));
+                Assert.AreEqual(DateTime.Now.ToString(context.CurrentCulture), StandardFilters.Date(context: context, input: "today", format: string.Empty));                
             });
         }
 
         [Test]
-        public void TestDateV21()
+        public async Task TestDateV21()
         {
-            Helper.LockTemplateStaticVars(Template.NamingConvention, () =>
+            await Helper.LockTemplateStaticVarsAsync(Template.NamingConvention, async () =>
             {
                 var context = _contextV21;// _contextV21 specifies InvariantCulture
                 var unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).ToLocalTime();
                 Assert.AreEqual(unixEpoch.ToString("g", context.FormatProvider), StandardFilters.Date(context: context, input: 0, format: "g"));
                 Assert.AreEqual(unixEpoch.AddSeconds(Int32.MaxValue).AddSeconds(1).ToString("g", context.FormatProvider), StandardFilters.Date(context: context, input: 2147483648, format: "g")); // Beyond Int32 boundary
                 Assert.AreEqual(unixEpoch.AddSeconds(UInt32.MaxValue).AddSeconds(1).ToString("g", context.FormatProvider), StandardFilters.Date(context: context, input: 4294967296, format: "g")); // Beyond UInt32 boundary
-                Helper.AssertTemplateResult(expected: unixEpoch.ToString("g"), template: "{{ 0 | date: 'g' }}", syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: unixEpoch.AddSeconds(Int32.MaxValue).AddSeconds(1).ToString("g"), template: "{{ 2147483648 | date: 'g' }}", syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: unixEpoch.AddSeconds(UInt32.MaxValue).AddSeconds(1).ToString("g"), template: "{{ 4294967296 | date: 'g' }}", syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: unixEpoch.ToString("g"), template: "{{ 0 | date: 'g' }}", syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: unixEpoch.AddSeconds(Int32.MaxValue).AddSeconds(1).ToString("g"), template: "{{ 2147483648 | date: 'g' }}", syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: unixEpoch.AddSeconds(UInt32.MaxValue).AddSeconds(1).ToString("g"), template: "{{ 4294967296 | date: 'g' }}", syntax: context.SyntaxCompatibilityLevel);
 
                 var testDate = new DateTime(2006, 8, 4, 10, 0, 0, DateTimeKind.Unspecified);
                 Assert.AreEqual("-14:00", StandardFilters.Date(context: context, input: new DateTimeOffset(testDate, TimeSpan.FromHours(-14)), format: "zzz"));
-                Helper.AssertTemplateResult(expected: "+00:00", template: "{{ '" + testDate.ToString("u") + "' | date: 'zzz' }}", syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "-14:00", template: "{{ '" + testDate.ToString("u").Replace("Z", "-14:00") + "' | date: 'zzz' }}", syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "+00:00", template: "{{ '" + testDate.ToString("u") + "' | date: 'zzz' }}", syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "-14:00", template: "{{ '" + testDate.ToString("u").Replace("Z", "-14:00") + "' | date: 'zzz' }}", syntax: context.SyntaxCompatibilityLevel);
 
                 // ISO-8601 date-time handling with and without timezone
-                Helper.AssertTemplateResult(expected: "2021-05-20T12:14:15-08:00", template: "{{ iso8601DateTime | date: 'yyyy-MM-ddThh:mm:sszzz' }}", localVariables: Hash.FromAnonymousObject(new { iso8601DateTime = "2021-05-20T12:14:15-08:00" }), syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "2021-05-20T12:14:15+09:00", template: "{{ iso8601DateTime | date: 'yyyy-MM-ddThh:mm:sszzz' }}", localVariables: Hash.FromAnonymousObject(new { iso8601DateTime = "2021-05-20T12:14:15+09:00" }), syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "2021-05-20", template: "{{ iso8601DateTime | date: 'yyyy-MM-dd' }}", localVariables: Hash.FromAnonymousObject(new { iso8601DateTime = "2021-05-20T12:14:15+01:00" }), syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "2021-05-20T12:14:15+00:00", template: "{{ iso8601DateTime | date: 'yyyy-MM-ddThh:mm:sszzz' }}", localVariables: Hash.FromAnonymousObject(new { iso8601DateTime = "2021-05-20T12:14:15Z" }), syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "2021-05-20T12:14:15", template: "{{ iso8601DateTime | date: 'yyyy-MM-ddThh:mm:ss' }}", localVariables: Hash.FromAnonymousObject(new { iso8601DateTime = "2021-05-20T12:14:15" }), syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "2021-05-20T12:14:15-08:00", template: "{{ iso8601DateTime | date: 'yyyy-MM-ddThh:mm:sszzz' }}", localVariables: Hash.FromAnonymousObject(new { iso8601DateTime = "2021-05-20T12:14:15-08:00" }), syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "2021-05-20T12:14:15+09:00", template: "{{ iso8601DateTime | date: 'yyyy-MM-ddThh:mm:sszzz' }}", localVariables: Hash.FromAnonymousObject(new { iso8601DateTime = "2021-05-20T12:14:15+09:00" }), syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "2021-05-20", template: "{{ iso8601DateTime | date: 'yyyy-MM-dd' }}", localVariables: Hash.FromAnonymousObject(new { iso8601DateTime = "2021-05-20T12:14:15+01:00" }), syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "2021-05-20T12:14:15+00:00", template: "{{ iso8601DateTime | date: 'yyyy-MM-ddThh:mm:sszzz' }}", localVariables: Hash.FromAnonymousObject(new { iso8601DateTime = "2021-05-20T12:14:15Z" }), syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "2021-05-20T12:14:15", template: "{{ iso8601DateTime | date: 'yyyy-MM-ddThh:mm:ss' }}", localVariables: Hash.FromAnonymousObject(new { iso8601DateTime = "2021-05-20T12:14:15" }), syntax: context.SyntaxCompatibilityLevel);
 
                 Liquid.UseRubyDateFormat = true; // ensure all Contexts created within tests are defaulted to Ruby date format
-                Helper.AssertTemplateResult(expected: "0", template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = 0 }), syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "2147483648", template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = 2147483648 }), syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "4294967296", template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = 4294967296 }), syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "0", template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = unixEpoch.ToUniversalTime() }), syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "0", template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = unixEpoch }), syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "0", template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = DateTime.SpecifyKind(unixEpoch, DateTimeKind.Unspecified) }), syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "0", template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = new DateTimeOffset(unixEpoch) }), syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "0", template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = new DateTimeOffset(unixEpoch).ToOffset(TimeSpan.FromHours(-14)) }), syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "0", template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = 0 }), syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "2147483648", template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = 2147483648 }), syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "4294967296", template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = 4294967296 }), syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "0", template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = unixEpoch.ToUniversalTime() }), syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "0", template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = unixEpoch }), syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "0", template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = DateTime.SpecifyKind(unixEpoch, DateTimeKind.Unspecified) }), syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "0", template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = new DateTimeOffset(unixEpoch) }), syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "0", template: "{{ epoch | date: '%s' }}", localVariables: Hash.FromAnonymousObject(new { epoch = new DateTimeOffset(unixEpoch).ToOffset(TimeSpan.FromHours(-14)) }), syntax: context.SyntaxCompatibilityLevel);
 
                 Assert.AreEqual("now", StandardFilters.Date(context: context, input: "now", format: null));
                 Assert.AreEqual("today", StandardFilters.Date(context: context, input: "today", format: null));
                 Assert.AreEqual("now", StandardFilters.Date(context: context, input: "now", format: string.Empty));
                 Assert.AreEqual("today", StandardFilters.Date(context: context, input: "today", format: string.Empty));
 
-                TestDate(context);
+                await TestDateAsync(context);
             });
         }
 
         [Test]
-        public void TestStrFTime()
+        public async Task TestStrFTime()
         {
-            Helper.LockTemplateStaticVars(Template.NamingConvention, () =>
+            await Helper.LockTemplateStaticVarsAsync(Template.NamingConvention, async () =>
             {
                 var context = _contextV20;
                 context.UseRubyDateFormat = true;
@@ -914,17 +919,17 @@ PaulGeorge",
 
                 Liquid.UseRubyDateFormat = true; // ensure all Context objects created within tests are defaulted to Ruby date format
                 Template template = Template.Parse(@"{{ hi | date:""%M"" }}");
-                Assert.AreEqual("hi", template.Render(Hash.FromAnonymousObject(new { hi = "hi" })));
+                Assert.AreEqual("hi", await template.RenderAsync(Hash.FromAnonymousObject(new { hi = "hi" })));
 
-                Helper.AssertTemplateResult(
+                await Helper.AssertTemplateResultAsync(
                     expected: "14, 16",
                     template: "{{ \"March 14, 2016\" | date: \"%d, %y\" }}",
                     syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(
+                await Helper.AssertTemplateResultAsync(
                     expected: "Mar 14, 16",
                     template: "{{ \"March 14, 2016\" | date: \"%b %d, %y\" }}",
                     syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(
+                await Helper.AssertTemplateResultAsync(
                     expected: $"This page was last updated at {DateTime.Now.ToString("yyyy-MM-dd HH:mm")}.",
                     template: "This page was last updated at {{ 'now' | date: '%Y-%m-%d %H:%M' }}.",
                     syntax: context.SyntaxCompatibilityLevel);
@@ -932,20 +937,20 @@ PaulGeorge",
         }
 
         [Test]
-        public void TestFirstLastUsingRuby()
+        public async Task TestFirstLastUsingRuby()
         {
             var namingConvention = new NamingConventions.RubyNamingConvention();
-            TestFirstLast(namingConvention, (name) => namingConvention.GetMemberName(name));
+            await TestFirstLastAsync(namingConvention, (name) => namingConvention.GetMemberName(name));
         }
 
         [Test]
-        public void TestFirstLastUsingCSharp()
+        public async Task TestFirstLastUsingCSharp()
         {
             var namingConvention = new NamingConventions.CSharpNamingConvention();
-            TestFirstLast(namingConvention, (name) => char.ToUpperInvariant(name[0]) + name.Substring(1));
+            await TestFirstLastAsync(namingConvention, (name) => char.ToUpperInvariant(name[0]) + name.Substring(1));
         }
 
-        private void TestFirstLast(NamingConventions.INamingConvention namingConvention, Func<string, string> filterNameFunc)
+        private async Task TestFirstLastAsync(NamingConventions.INamingConvention namingConvention, Func<string, string> filterNameFunc)
         {
             var splitFilter = filterNameFunc("split");
             var firstFilter = filterNameFunc("first");
@@ -958,48 +963,48 @@ PaulGeorge",
             Assert.Null(StandardFilters.First(new object[] { }));
             Assert.Null(StandardFilters.Last(new object[] { }));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: ".",
                 template: "{{ 'Ground control to Major Tom.' | " + lastFilter + " }}",
                 namingConvention: namingConvention);
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "Tom.",
                 template: "{{ 'Ground control to Major Tom.' | " + splitFilter + ": ' ' | " + lastFilter + " }}",
                 namingConvention: namingConvention);
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "tiger",
                 template: "{% assign my_array = 'zebra, octopus, giraffe, tiger' | " + splitFilter + ": ', ' %}{{ my_array." + lastFilter + " }}",
                 namingConvention: namingConvention);
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "There goes a tiger!",
                 template: "{% assign my_array = 'zebra, octopus, giraffe, tiger' | " + splitFilter + ": ', ' %}{% if my_array." + lastFilter + " == 'tiger' %}There goes a tiger!{% endif %}",
                 namingConvention: namingConvention);
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "G",
                 template: "{{ 'Ground control to Major Tom.' | " + firstFilter + " }}",
                 namingConvention: namingConvention);
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "Ground",
                 template: "{{ 'Ground control to Major Tom.' | " + splitFilter + ": ' ' | " + firstFilter + " }}",
                 namingConvention: namingConvention);
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "zebra",
                 template: "{% assign my_array = 'zebra, octopus, giraffe, tiger' | " + splitFilter + ": ', ' %}{{ my_array." + firstFilter + " }}",
                 namingConvention: namingConvention);
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "There goes a zebra!",
                 template: "{% assign my_array = 'zebra, octopus, giraffe, tiger' | " + splitFilter + ": ', ' %}{% if my_array." + firstFilter + " == 'zebra' %}There goes a zebra!{% endif %}",
                 namingConvention: namingConvention);
         }
 
         [Test]
-        public void TestReplace()
+        public async Task TestReplace()
         {
-            TestReplace(_contextV20);
+            await TestReplaceAsync(_contextV20);
         }
 
-        public void TestReplace(Context context)
+        public async Task TestReplaceAsync(Context context)
         {
             Assert.Null(StandardFilters.Replace(context: context, input: null, @string: "a", replacement: "b"));
             Assert.AreEqual(expected: "", actual: StandardFilters.Replace(context: context, input: "", @string: "a", replacement: "b"));
@@ -1008,8 +1013,8 @@ PaulGeorge",
             Assert.AreEqual(expected: "b b b b", actual: StandardFilters.Replace(context: context, input: "a a a a", @string: "a", replacement: "b"));
 
             Assert.AreEqual(expected: "Tesvalue\\\"", actual: StandardFilters.Replace(context: context, input: "Tesvalue\"", @string: "\"", replacement: "\\\""));
-            Helper.AssertTemplateResult(expected: "Tesvalue\\\"", template: "{{ 'Tesvalue\"' | replace: '\"', '\\\"' }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(expected: "Tesvalue\\\"", template: "{{ 'Tesvalue\"' | replace: '\"', '\\\"' }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(
                 expected: "Tesvalue\\\"",
                 template: "{{ context | replace: '\"', '\\\"' }}",
                 localVariables: Hash.FromAnonymousObject(new { context = "Tesvalue\"" }),
@@ -1024,39 +1029,39 @@ PaulGeorge",
         }
 
         [Test]
-        public void TestReplaceRegexV21()
+        public async Task TestReplaceRegexV21()
         {
             var context = _contextV21;
             Assert.AreEqual(expected: "a A A a", actual: StandardFilters.Replace(context: context, input: "a A A a", @string: "[Aa]", replacement: "b"));
-            TestReplace(context);
+            await TestReplaceAsync(context);
         }
 
         [Test]
-        public void TestReplaceChain()
+        public async Task TestReplaceChain()
         {
             var assign = @"{%assign az='azerty'%}";
-            Helper.AssertTemplateResult("qzerty", assign + "{{az |replace: 'a','q'}}");
-            Helper.AssertTemplateResult("q zerty", assign + "{{az |replace: 'a','q '}}");
-            Helper.AssertTemplateResult("qw erty", assign + "{{az |replace: 'a','q'   |replace: 'z','w '}}");
-            Helper.AssertTemplateResult("q werty", assign + "{{az |replace: 'a','q '  |replace: 'z','w'}}");
-            Helper.AssertTemplateResult("q rwerty", assign + "{{az |replace: 'a','q r' |replace: 'z','w'}}");
-            Helper.AssertTemplateResult(" qwerty", assign + "{{az |replace: 'a',' q'  |replace: 'z','w'}}");
+            await Helper.AssertTemplateResultAsync("qzerty", assign + "{{az |replace: 'a','q'}}");
+            await Helper.AssertTemplateResultAsync("q zerty", assign + "{{az |replace: 'a','q '}}");
+            await Helper.AssertTemplateResultAsync("qw erty", assign + "{{az |replace: 'a','q'   |replace: 'z','w '}}");
+            await Helper.AssertTemplateResultAsync("q werty", assign + "{{az |replace: 'a','q '  |replace: 'z','w'}}");
+            await Helper.AssertTemplateResultAsync("q rwerty", assign + "{{az |replace: 'a','q r' |replace: 'z','w'}}");
+            await Helper.AssertTemplateResultAsync(" qwerty", assign + "{{az |replace: 'a',' q'  |replace: 'z','w'}}");
         }
 
         [Test]
-        public void TestReplaceFirst()
+        public async Task TestReplaceFirst()
         {
-            TestReplaceFirst(_contextV20);
+            await TestReplaceFirstAsync(_contextV20);
         }
 
-        public void TestReplaceFirst(Context context)
+        public async Task TestReplaceFirstAsync(Context context)
         {
             Assert.Null(StandardFilters.ReplaceFirst(context: context, input: null, @string: "a", replacement: "b"));
             Assert.AreEqual("", StandardFilters.ReplaceFirst(context: context, input: "", @string: "a", replacement: "b"));
             Assert.AreEqual("a a a a", StandardFilters.ReplaceFirst(context: context, input: "a a a a", @string: null, replacement: "b"));
             Assert.AreEqual("a a a a", StandardFilters.ReplaceFirst(context: context, input: "a a a a", @string: "", replacement: "b"));
             Assert.AreEqual("b a a a", StandardFilters.ReplaceFirst(context: context, input: "a a a a", @string: "a", replacement: "b"));
-            Helper.AssertTemplateResult(expected: "b a a a", template: "{{ 'a a a a' | replace_first: 'a', 'b' }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "b a a a", template: "{{ 'a a a a' | replace_first: 'a', 'b' }}", syntax: context.SyntaxCompatibilityLevel);
         }
 
         [Test]
@@ -1067,25 +1072,25 @@ PaulGeorge",
         }
 
         [Test]
-        public void TestReplaceFirstRegexV21()
+        public async Task TestReplaceFirstRegexV21()
         {
             var context = _contextV21;
             Assert.AreEqual(expected: "a A A a", actual: StandardFilters.ReplaceFirst(context: context, input: "a A A a", @string: "[Aa]", replacement: "b"));
-            TestReplaceFirst(context);
+            await TestReplaceFirstAsync(context);
         }
 
         [Test]
-        public void TestRemove()
+        public async Task TestRemove()
         {
-            TestRemove(_contextV20);
+            await TestRemoveAsync(_contextV20);
         }
 
-        public void TestRemove(Context context)
+        public async Task TestRemoveAsync(Context context)
         {
 
             Assert.AreEqual("   ", StandardFilters.Remove("a a a a", "a"));
             Assert.AreEqual("a a a", StandardFilters.RemoveFirst(context: context, input: "a a a a", @string: "a "));
-            Helper.AssertTemplateResult(expected: "a a a", template: "{{ 'a a a a' | remove_first: 'a ' }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "a a a", template: "{{ 'a a a a' | remove_first: 'a ' }}", syntax: context.SyntaxCompatibilityLevel);
         }
 
         [Test]
@@ -1096,67 +1101,67 @@ PaulGeorge",
         }
 
         [Test]
-        public void TestRemoveFirstRegexV21()
+        public async Task TestRemoveFirstRegexV21()
         {
             var context = _contextV21;
             Assert.AreEqual(expected: "Mr Jones", actual: StandardFilters.RemoveFirst(context: context, input: "Mr. Jones", @string: "."));
-            TestRemove(context);
+            await TestRemoveAsync(context);
         }
 
         [Test]
-        public void TestPipesInStringArguments()
+        public async Task TestPipesInStringArguments()
         {
-            Helper.AssertTemplateResult("foobar", "{{ 'foo|bar' | remove: '|' }}");
+            await Helper.AssertTemplateResultAsync("foobar", "{{ 'foo|bar' | remove: '|' }}");
         }
 
         [Test]
-        public void TestStripWindowsNewlines()
+        public async Task TestStripWindowsNewlines()
         {
-            Helper.AssertTemplateResult("abc", "{{ source | strip_newlines }}", Hash.FromAnonymousObject(new { source = "a\r\nb\r\nc" }));
-            Helper.AssertTemplateResult("ab", "{{ source | strip_newlines }}", Hash.FromAnonymousObject(new { source = "a\r\n\r\n\r\nb" }));
+            await Helper.AssertTemplateResultAsync("abc", "{{ source | strip_newlines }}", Hash.FromAnonymousObject(new { source = "a\r\nb\r\nc" }));
+            await Helper.AssertTemplateResultAsync("ab", "{{ source | strip_newlines }}", Hash.FromAnonymousObject(new { source = "a\r\n\r\n\r\nb" }));
         }
 
         [Test]
-        public void TestStripUnixNewlines()
+        public async Task TestStripUnixNewlines()
         {
-            Helper.AssertTemplateResult("abc", "{{ source | strip_newlines }}", Hash.FromAnonymousObject(new { source = "a\nb\nc" }));
-            Helper.AssertTemplateResult("ab", "{{ source | strip_newlines }}", Hash.FromAnonymousObject(new { source = "a\n\n\nb" }));
+            await Helper.AssertTemplateResultAsync("abc", "{{ source | strip_newlines }}", Hash.FromAnonymousObject(new { source = "a\nb\nc" }));
+            await Helper.AssertTemplateResultAsync("ab", "{{ source | strip_newlines }}", Hash.FromAnonymousObject(new { source = "a\n\n\nb" }));
         }
 
         [Test]
-        public void TestWindowsNewlinesToBr()
+        public async Task TestWindowsNewlinesToBr()
         {
-            Helper.AssertTemplateResult("a<br />\r\nb<br />\r\nc",
+            await Helper.AssertTemplateResultAsync("a<br />\r\nb<br />\r\nc",
                 "{{ source | newline_to_br }}",
                 Hash.FromAnonymousObject(new { source = "a\r\nb\r\nc" }));
         }
 
         [Test]
-        public void TestUnixNewlinesToBr()
+        public async Task TestUnixNewlinesToBr()
         {
-            Helper.AssertTemplateResult("a<br />\nb<br />\nc",
+            await Helper.AssertTemplateResultAsync("a<br />\nb<br />\nc",
                 "{{ source | newline_to_br }}",
                 Hash.FromAnonymousObject(new { source = "a\nb\nc" }));
         }
 
         [Test]
-        public void TestPlus()
+        public async Task TestPlus()
         {
-            TestPlus(_contextV20);
+            await TestPlusAsync(_contextV20);
         }
 
-        private void TestPlus(Context context)
+        private async Task TestPlusAsync(Context context)
         {
             using (CultureHelper.SetCulture("en-GB"))
             {
-                Helper.AssertTemplateResult(expected: "2", template: "{{ 1 | plus:1 }}", syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "5.5", template: "{{ 2  | plus:3.5 }}", syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "5.5", template: "{{ 3.5 | plus:2 }}", syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "2", template: "{{ 1 | plus:1 }}", syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "5.5", template: "{{ 2  | plus:3.5 }}", syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "5.5", template: "{{ 3.5 | plus:2 }}", syntax: context.SyntaxCompatibilityLevel);
 
                 // Test that decimals are not introducing rounding-precision issues
-                Helper.AssertTemplateResult(expected: "148397.77", template: "{{ 148387.77 | plus:10 }}", syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "148397.77", template: "{{ 148387.77 | plus:10 }}", syntax: context.SyntaxCompatibilityLevel);
 
-                Helper.AssertTemplateResult(
+                await Helper.AssertTemplateResultAsync(
                     expected: "2147483648",
                     template: "{{ i | plus: i2 }}",
                     localVariables: Hash.FromAnonymousObject(new { i = (int)Int32.MaxValue, i2 = (Int64)1 }),
@@ -1165,39 +1170,39 @@ PaulGeorge",
         }
 
         [Test]
-        public void TestPlusStringV20()
+        public async Task TestPlusStringV20()
         {
             var context = _contextV20;
-            Helper.AssertTemplateResult(expected: "11", template: "{{ '1' | plus: 1 }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "11", template: "{{ '1' | plus: 1 }}", syntax: context.SyntaxCompatibilityLevel);
             var renderParams = new RenderParameters(CultureInfo.InvariantCulture) { ErrorsOutputMode = ErrorsOutputMode.Rethrow, SyntaxCompatibilityLevel = context.SyntaxCompatibilityLevel };
-            Assert.Throws<InvalidOperationException>(() => Template.Parse("{{ 1 | plus: '1' }}").Render(renderParams));
+            Assert.ThrowsAsync<InvalidOperationException>(async () => await Template.Parse("{{ 1 | plus: '1' }}").RenderAsync(renderParams));
         }
 
         [Test]
-        public void TestPlusStringV21()
+        public async Task TestPlusStringV21()
         {
             var context = _contextV21;
-            Helper.AssertTemplateResult(expected: "2", template: "{{ '1' | plus: 1 }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: "2", template: "{{ 1 | plus: '1' }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: "2", template: "{{ '1' | plus: '1' }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: "5.5", template: "{{ 2 | plus: '3.5' }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: "5.5", template: "{{ '3.5' | plus: 2 }}", syntax: context.SyntaxCompatibilityLevel);
-            TestPlus(context);
+            await Helper.AssertTemplateResultAsync(expected: "2", template: "{{ '1' | plus: 1 }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "2", template: "{{ 1 | plus: '1' }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "2", template: "{{ '1' | plus: '1' }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "5.5", template: "{{ 2 | plus: '3.5' }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "5.5", template: "{{ '3.5' | plus: 2 }}", syntax: context.SyntaxCompatibilityLevel);
+            await TestPlusAsync(context);
         }
 
         [Test]
-        public void TestMinus()
+        public Task TestMinusAsync()
         {
-            TestMinus(_contextV20);
+            return TestMinusAsync(_contextV20);
         }
 
-        private void TestMinus(Context context)
+        private async Task TestMinusAsync(Context context)
         {
             using (CultureHelper.SetCulture("en-GB"))
             {
-                Helper.AssertTemplateResult(expected: "4", template: "{{ input | minus:operand }}", localVariables: Hash.FromAnonymousObject(new { input = 5, operand = 1 }), syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "-1.5", template: "{{ 2  | minus:3.5 }}", syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "1.5", template: "{{ 3.5 | minus:2 }}", syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "4", template: "{{ input | minus:operand }}", localVariables: Hash.FromAnonymousObject(new { input = 5, operand = 1 }), syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "-1.5", template: "{{ 2  | minus:3.5 }}", syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "1.5", template: "{{ 3.5 | minus:2 }}", syntax: context.SyntaxCompatibilityLevel);
             }
         }
 
@@ -1205,63 +1210,63 @@ PaulGeorge",
         public void TestMinusStringV20()
         {
             var renderParams = new RenderParameters(CultureInfo.InvariantCulture) { ErrorsOutputMode = ErrorsOutputMode.Rethrow, SyntaxCompatibilityLevel = _contextV20.SyntaxCompatibilityLevel };
-            Assert.Throws<InvalidOperationException>(() => Template.Parse("{{ '2' | minus: 1 }}").Render(renderParams));
-            Assert.Throws<InvalidOperationException>(() => Template.Parse("{{ 2 | minus: '1' }}").Render(renderParams));
+            Assert.ThrowsAsync<InvalidOperationException>(async () => await Template.Parse("{{ '2' | minus: 1 }}").RenderAsync(renderParams));
+            Assert.ThrowsAsync<InvalidOperationException>(async () => await Template.Parse("{{ 2 | minus: '1' }}").RenderAsync(renderParams));
         }
 
         [Test]
-        public void TestMinusStringV21()
+        public async Task TestMinusStringV21()
         {
             var context = _contextV21;
-            Helper.AssertTemplateResult(expected: "1", template: "{{ '2' | minus: 1 }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: "1", template: "{{ 2 | minus: '1' }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: "-1.5", template: "{{ 2 | minus: '3.5' }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: "-1.5", template: "{{ '2.5' | minus: 4 }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: "-1", template: "{{ '2.5' | minus: '3.5' }}", syntax: context.SyntaxCompatibilityLevel);
-            TestMinus(context);
+            await Helper.AssertTemplateResultAsync(expected: "1", template: "{{ '2' | minus: 1 }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "1", template: "{{ 2 | minus: '1' }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "-1.5", template: "{{ 2 | minus: '3.5' }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "-1.5", template: "{{ '2.5' | minus: 4 }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "-1", template: "{{ '2.5' | minus: '3.5' }}", syntax: context.SyntaxCompatibilityLevel);
+            await TestMinusAsync(context);
         }
 
         [Test]
-        public void TestPlusCombinedWithMinus()
+        public async Task TestPlusCombinedWithMinus()
         {
             using (CultureHelper.SetCulture("en-GB"))
             {
                 // This detects rounding issues not visible with single operation.
-                Helper.AssertTemplateResult("0.1", "{{ 0.1 | plus: 10 | minus: 10 }}");
+                await Helper.AssertTemplateResultAsync("0.1", "{{ 0.1 | plus: 10 | minus: 10 }}");
             }
         }
 
         [Test]
-        public void TestMinusWithFrenchDecimalSeparator()
+        public async Task TestMinusWithFrenchDecimalSeparator()
         {
             using (CultureHelper.SetCulture("fr-FR"))
             {
-                Helper.AssertTemplateResult(string.Format("1{0}2", CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator),
+                await Helper.AssertTemplateResultAsync(string.Format("1{0}2", CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator),
                     "{{ 3,2 | minus:2 | round:1 }}");
             }
         }
 
         [Test]
-        public void TestRound()
+        public async Task TestRound()
         {
             using (CultureHelper.SetCulture("en-GB"))
             {
-                Helper.AssertTemplateResult("1.235", "{{ 1.234678 | round:3 }}");
-                Helper.AssertTemplateResult("1", "{{ 1 | round }}");
+                await Helper.AssertTemplateResultAsync("1.235", "{{ 1.234678 | round:3 }}");
+                await Helper.AssertTemplateResultAsync("1", "{{ 1 | round }}");
 
                 Assert.Null(StandardFilters.Round("1.2345678", "two"));
             }
         }
 
         [Test]
-        public void TestCeil()
+        public async Task TestCeil()
         {
             using (CultureHelper.SetCulture("en-GB"))
             {
-                Helper.AssertTemplateResult("2", "{{ 1.2 | ceil }}");
-                Helper.AssertTemplateResult("2", "{{ 2.0 | ceil }}");
-                Helper.AssertTemplateResult("184", "{{ 183.357 | ceil }}");
-                Helper.AssertTemplateResult("4", "{{ \"3.5\" | ceil }}");
+                await Helper.AssertTemplateResultAsync("2", "{{ 1.2 | ceil }}");
+                await Helper.AssertTemplateResultAsync("2", "{{ 2.0 | ceil }}");
+                await Helper.AssertTemplateResultAsync("184", "{{ 183.357 | ceil }}");
+                await Helper.AssertTemplateResultAsync("4", "{{ \"3.5\" | ceil }}");
 
                 Assert.Null(StandardFilters.Ceil(_contextV20, ""));
                 Assert.Null(StandardFilters.Ceil(_contextV20, "two"));
@@ -1269,14 +1274,14 @@ PaulGeorge",
         }
 
         [Test]
-        public void TestFloor()
+        public async Task TestFloor()
         {
             using (CultureHelper.SetCulture("en-GB"))
             {
-                Helper.AssertTemplateResult("1", "{{ 1.2 | floor }}");
-                Helper.AssertTemplateResult("2", "{{ 2.0 | floor }}");
-                Helper.AssertTemplateResult("183", "{{ 183.357 | floor }}");
-                Helper.AssertTemplateResult("3", "{{ \"3.5\" | floor }}");
+                await Helper.AssertTemplateResultAsync("1", "{{ 1.2 | floor }}");
+                await Helper.AssertTemplateResultAsync("2", "{{ 2.0 | floor }}");
+                await Helper.AssertTemplateResultAsync("183", "{{ 183.357 | floor }}");
+                await Helper.AssertTemplateResultAsync("3", "{{ \"3.5\" | floor }}");
 
                 Assert.Null(StandardFilters.Floor(_contextV20, ""));
                 Assert.Null(StandardFilters.Floor(_contextV20, "two"));
@@ -1284,39 +1289,39 @@ PaulGeorge",
         }
 
         [Test]
-        public void TestTimes()
+        public async Task TestTimes()
         {
-            TestTimes(_contextV20);
+            await TestTimesAsync(_contextV20);
         }
 
-        private void TestTimes(Context context)
+        private async Task TestTimesAsync(Context context)
         {
             using (CultureHelper.SetCulture("en-GB"))
             {
-                Helper.AssertTemplateResult(expected: "12", template: "{{ 3 | times:4 }}", syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "125", template: "{{ 10 | times:12.5 }}", syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "125", template: "{{ 10.0 | times:12.5 }}", syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "125", template: "{{ 12.5 | times:10 }}", syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(expected: "125", template: "{{ 12.5 | times:10.0 }}", syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "12", template: "{{ 3 | times:4 }}", syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "125", template: "{{ 10 | times:12.5 }}", syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "125", template: "{{ 10.0 | times:12.5 }}", syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "125", template: "{{ 12.5 | times:10 }}", syntax: context.SyntaxCompatibilityLevel);
+                await Helper.AssertTemplateResultAsync(expected: "125", template: "{{ 12.5 | times:10.0 }}", syntax: context.SyntaxCompatibilityLevel);
 
                 // Test against overflows when we try to be precise but the result exceeds the range of the input type.
-                Helper.AssertTemplateResult(
+                await Helper.AssertTemplateResultAsync(
                     expected: ((double)((decimal.MaxValue / 100) + (decimal).1) * (double)((decimal.MaxValue / 100) + (decimal).1)).ToString(),
                     template: $"{{{{ {(decimal.MaxValue / 100) + (decimal).1} | times:{(decimal.MaxValue / 100) + (decimal).1} }}}}",
                     syntax: context.SyntaxCompatibilityLevel);
 
                 // Test against overflows going beyond the double precision float type's range
-                Helper.AssertTemplateResult(
+                await Helper.AssertTemplateResultAsync(
                     expected: double.NegativeInfinity.ToString(),
                     template: $"{{{{ 12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890.0 | times:-12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890.0 }}}}",
                     syntax: context.SyntaxCompatibilityLevel);
-                Helper.AssertTemplateResult(
+                await Helper.AssertTemplateResultAsync(
                     expected: double.PositiveInfinity.ToString(),
                     template: $"{{{{ 12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890.0 | times:12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890.0 }}}}",
                     syntax: context.SyntaxCompatibilityLevel);
 
                 // Ensures no underflow exception is thrown when the result doesn't fit the precision of double.
-                Helper.AssertTemplateResult(expected: "0",
+                await Helper.AssertTemplateResultAsync(expected: "0",
                     template: $"{{{{ 0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001 | times:0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001 }}}}",
                     syntax: context.SyntaxCompatibilityLevel);
             }
@@ -1327,83 +1332,83 @@ PaulGeorge",
         }
 
         [Test]
-        public void TestTimesStringV20()
+        public async Task TestTimesStringV20()
         {
             var context = _contextV20;
-            Helper.AssertTemplateResult(expected: "foofoofoofoo", template: "{{ 'foo' | times:4 }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: "3333", template: "{{ '3' | times:4 }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "foofoofoofoo", template: "{{ 'foo' | times:4 }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "3333", template: "{{ '3' | times:4 }}", syntax: context.SyntaxCompatibilityLevel);
             var renderParams = new RenderParameters(CultureInfo.InvariantCulture) { ErrorsOutputMode = ErrorsOutputMode.Rethrow, SyntaxCompatibilityLevel = context.SyntaxCompatibilityLevel };
-            Assert.Throws<InvalidOperationException>(() => Template.Parse("{{ 3 | times: '4' }}").Render(renderParams));
-            Assert.Throws<InvalidOperationException>(() => Template.Parse("{{ '3' | times: '4' }}").Render(renderParams));
+            Assert.ThrowsAsync<InvalidOperationException>(async () => await Template.Parse("{{ 3 | times: '4' }}").RenderAsync(renderParams));
+            Assert.ThrowsAsync<InvalidOperationException>(async () => await Template.Parse("{{ '3' | times: '4' }}").RenderAsync(renderParams));
         }
 
         [Test]
-        public void TestTimesStringV21()
+        public async Task TestTimesStringV21()
         {
             var context = _contextV21;
-            Helper.AssertTemplateResult(expected: "12", template: "{{ '3' | times: 4 }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: "12", template: "{{ 3 | times: '4' }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: "12", template: "{{ '3' | times: '4' }}", syntax: context.SyntaxCompatibilityLevel);
-            TestTimes(context);
+            await Helper.AssertTemplateResultAsync(expected: "12", template: "{{ '3' | times: 4 }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "12", template: "{{ 3 | times: '4' }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "12", template: "{{ '3' | times: '4' }}", syntax: context.SyntaxCompatibilityLevel);
+            await TestTimesAsync(context);
         }
 
         [Test]
-        public void TestAppend()
+        public async Task TestAppend()
         {
             Hash assigns = Hash.FromAnonymousObject(new { a = "bc", b = "d" });
-            Helper.AssertTemplateResult(expected: "bcd", template: "{{ a | append: 'd'}}", localVariables: assigns);
-            Helper.AssertTemplateResult(expected: "bcd", template: "{{ a | append: b}}", localVariables: assigns);
-            Helper.AssertTemplateResult(expected: "/my/fancy/url.html", template: "{{ '/my/fancy/url' | append: '.html' }}");
-            Helper.AssertTemplateResult(expected: "website.com/index.html", template: "{% assign filename = '/index.html' %}{{ 'website.com' | append: filename }}");
+            await Helper.AssertTemplateResultAsync(expected: "bcd", template: "{{ a | append: 'd'}}", localVariables: assigns);
+            await Helper.AssertTemplateResultAsync(expected: "bcd", template: "{{ a | append: b}}", localVariables: assigns);
+            await Helper.AssertTemplateResultAsync(expected: "/my/fancy/url.html", template: "{{ '/my/fancy/url' | append: '.html' }}");
+            await Helper.AssertTemplateResultAsync(expected: "website.com/index.html", template: "{% assign filename = '/index.html' %}{{ 'website.com' | append: filename }}");
         }
 
         [Test]
-        public void TestPrepend()
+        public async Task TestPrepend()
         {
             Hash assigns = Hash.FromAnonymousObject(new { a = "bc", b = "a" });
-            Helper.AssertTemplateResult("abc", "{{ a | prepend: 'a'}}", assigns);
-            Helper.AssertTemplateResult("abc", "{{ a | prepend: b}}", assigns);
+            await Helper.AssertTemplateResultAsync("abc", "{{ a | prepend: 'a'}}", assigns);
+            await Helper.AssertTemplateResultAsync("abc", "{{ a | prepend: b}}", assigns);
         }
 
         [Test]
-        public void TestDividedBy()
+        public async Task TestDividedBy()
         {
-            TestDividedBy(_contextV20);
+            await TestDividedByAsync(_contextV20);
         }
 
-        private void TestDividedBy(Context context)
+        private async Task TestDividedByAsync(Context context)
         {
-            Helper.AssertTemplateResult(expected: "4", template: "{{ 12 | divided_by:3 }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: "4", template: "{{ 14 | divided_by:3 }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: "5", template: "{{ 15 | divided_by:3 }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "4", template: "{{ 12 | divided_by:3 }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "4", template: "{{ 14 | divided_by:3 }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "5", template: "{{ 15 | divided_by:3 }}", syntax: context.SyntaxCompatibilityLevel);
             Assert.Null(StandardFilters.DividedBy(context: context, input: null, operand: 3));
             Assert.Null(StandardFilters.DividedBy(context: context, input: 4, operand: null));
 
             // Ensure we preserve floating point behavior for division by zero, and don't start throwing exceptions.
-            Helper.AssertTemplateResult(expected: double.PositiveInfinity.ToString(), template: "{{ 1.0 | divided_by:0.0 }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: double.NegativeInfinity.ToString(), template: "{{ -1.0 | divided_by:0.0 }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: "NaN", template: "{{ 0.0 | divided_by:0.0 }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: double.PositiveInfinity.ToString(), template: "{{ 1.0 | divided_by:0.0 }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: double.NegativeInfinity.ToString(), template: "{{ -1.0 | divided_by:0.0 }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "NaN", template: "{{ 0.0 | divided_by:0.0 }}", syntax: context.SyntaxCompatibilityLevel);
         }
 
         [Test]
         public void TestDividedByStringV20()
         {
             var renderParams = new RenderParameters(CultureInfo.InvariantCulture) { ErrorsOutputMode = ErrorsOutputMode.Rethrow, SyntaxCompatibilityLevel = _contextV20.SyntaxCompatibilityLevel };
-            Assert.Throws<InvalidOperationException>(() => Template.Parse("{{ '12' | divided_by: 3 }}").Render(renderParams));
-            Assert.Throws<InvalidOperationException>(() => Template.Parse("{{ 12 | divided_by: '3' }}").Render(renderParams));
+            Assert.ThrowsAsync<InvalidOperationException>(async () => await Template.Parse("{{ '12' | divided_by: 3 }}").RenderAsync(renderParams));
+            Assert.ThrowsAsync<InvalidOperationException>(async () => await Template.Parse("{{ 12 | divided_by: '3' }}").RenderAsync(renderParams));
         }
 
         [Test]
-        public void TestDividedByStringV21()
+        public async Task TestDividedByStringV21()
         {
             var context = _contextV21;
-            Helper.AssertTemplateResult(expected: "4", template: "{{ '12' | divided_by: 3 }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: "4", template: "{{ 12 | divided_by: '3' }}", syntax: context.SyntaxCompatibilityLevel);
-            TestDividedBy(context);
+            await Helper.AssertTemplateResultAsync(expected: "4", template: "{{ '12' | divided_by: 3 }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "4", template: "{{ 12 | divided_by: '3' }}", syntax: context.SyntaxCompatibilityLevel);
+            await TestDividedByAsync(context);
         }
 
         [Test]
-        public void TestInt32DividedByInt64()
+        public async Task TestInt32DividedByInt64()
         {
             int a = 20;
             long b = 5;
@@ -1412,21 +1417,21 @@ PaulGeorge",
 
 
             Hash assigns = Hash.FromAnonymousObject(new { a = a, b = b });
-            Helper.AssertTemplateResult("4", "{{ a | divided_by:b }}", assigns);
+            await Helper.AssertTemplateResultAsync("4", "{{ a | divided_by:b }}", assigns);
         }
 
         [Test]
-        public void TestModulo()
+        public async Task TestModulo()
         {
-            TestModulo(_contextV20);
+            await TestModuloAsync(_contextV20);
         }
 
-        private void TestModulo(Context context)
+        private async Task TestModuloAsync(Context context)
         {
-            Helper.AssertTemplateResult(expected: "1", template: "{{ 3 | modulo:2 }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: "7.77", template: "{{ 148387.77 | modulo:10 }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: "5.32", template: "{{ 3455.32 | modulo:10 }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: "3.12", template: "{{ 23423.12 | modulo:10 }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "1", template: "{{ 3 | modulo:2 }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "7.77", template: "{{ 148387.77 | modulo:10 }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "5.32", template: "{{ 3455.32 | modulo:10 }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "3.12", template: "{{ 23423.12 | modulo:10 }}", syntax: context.SyntaxCompatibilityLevel);
             Assert.Null(StandardFilters.Modulo(context: context, input: null, operand: 3));
             Assert.Null(StandardFilters.Modulo(context: context, input: 4, operand: null));
         }
@@ -1434,17 +1439,17 @@ PaulGeorge",
         public void TestModuloStringV20()
         {
             var renderParams = new RenderParameters(CultureInfo.InvariantCulture) { ErrorsOutputMode = ErrorsOutputMode.Rethrow, SyntaxCompatibilityLevel = _contextV20.SyntaxCompatibilityLevel };
-            Assert.Throws<InvalidOperationException>(() => Template.Parse("{{ '3' | modulo: 2 }}").Render(renderParams));
-            Assert.Throws<InvalidOperationException>(() => Template.Parse("{{ 3 | modulo: '2' }}").Render(renderParams));
+            Assert.ThrowsAsync<InvalidOperationException>(async () => await Template.Parse("{{ '3' | modulo: 2 }}").RenderAsync(renderParams));
+            Assert.ThrowsAsync<InvalidOperationException>(async () => await Template.Parse("{{ 3 | modulo: '2' }}").RenderAsync(renderParams));
         }
 
         [Test]
-        public void TestModuloStringV21()
+        public async Task TestModuloStringV21()
         {
             var context = _contextV21;
-            Helper.AssertTemplateResult(expected: "1", template: "{{ '3' | modulo: 2 }}", syntax: context.SyntaxCompatibilityLevel);
-            Helper.AssertTemplateResult(expected: "1", template: "{{ 3 | modulo: '2' }}", syntax: context.SyntaxCompatibilityLevel);
-            TestModulo(context);
+            await Helper.AssertTemplateResultAsync(expected: "1", template: "{{ '3' | modulo: 2 }}", syntax: context.SyntaxCompatibilityLevel);
+            await Helper.AssertTemplateResultAsync(expected: "1", template: "{{ 3 | modulo: '2' }}", syntax: context.SyntaxCompatibilityLevel);
+            await TestModuloAsync(context);
         }
 
         [Test]
@@ -1465,16 +1470,16 @@ PaulGeorge",
 
 
         [Test]
-        public void TestDefault()
+        public async Task TestDefault()
         {
             Hash assigns = Hash.FromAnonymousObject(new { var1 = "foo", var2 = "bar" });
-            Helper.AssertTemplateResult("foo", "{{ var1 | default: 'foobar' }}", assigns);
-            Helper.AssertTemplateResult("bar", "{{ var2 | default: 'foobar' }}", assigns);
-            Helper.AssertTemplateResult("foobar", "{{ unknownvariable | default: 'foobar' }}", assigns);
+            await Helper.AssertTemplateResultAsync("foo", "{{ var1 | default: 'foobar' }}", assigns);
+            await Helper.AssertTemplateResultAsync("bar", "{{ var2 | default: 'foobar' }}", assigns);
+            await Helper.AssertTemplateResultAsync("foobar", "{{ unknownvariable | default: 'foobar' }}", assigns);
         }
 
         [Test]
-        public void TestCapitalizeV20()
+        public async Task TestCapitalizeV20()
         {
             var context = _contextV20;
             Assert.AreEqual(null, StandardFilters.Capitalize(context: context, input: null));
@@ -1482,14 +1487,14 @@ PaulGeorge",
             Assert.AreEqual(" ", StandardFilters.Capitalize(context: context, input: " "));
             Assert.AreEqual("That Is One Sentence.", StandardFilters.Capitalize(context: context, input: "That is one sentence."));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "Title",
                 template: "{{ 'title' | capitalize }}",
                 syntax: context.SyntaxCompatibilityLevel);
         }
 
         [Test]
-        public void TestCapitalizeV21()
+        public async Task TestCapitalizeV21()
         {
             var context = _contextV21;
             Assert.AreEqual(null, StandardFilters.Capitalize(context: context, input: null));
@@ -1497,14 +1502,14 @@ PaulGeorge",
             Assert.AreEqual(" ", StandardFilters.Capitalize(context: context, input: " "));
             Assert.AreEqual(" My boss is Mr. Doe.", StandardFilters.Capitalize(context: context, input: " my boss is Mr. Doe."));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "My great title",
                 template: "{{ 'my great title' | capitalize }}",
                 syntax: context.SyntaxCompatibilityLevel);
         }
 
         [Test]
-        public void TestCapitalizeV22()
+        public async Task TestCapitalizeV22()
         {
             var context = _contextV22;
             Assert.AreEqual(null, StandardFilters.Capitalize(context: context, input: null));
@@ -1512,7 +1517,7 @@ PaulGeorge",
             Assert.AreEqual(" ", StandardFilters.Capitalize(context: context, input: " "));
             Assert.AreEqual("My boss is mr. doe.", StandardFilters.Capitalize(context: context, input: "my boss is Mr. Doe."));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "My great title",
                 template: "{{ 'my Great Title' | capitalize }}",
                 syntax: context.SyntaxCompatibilityLevel);
@@ -1528,7 +1533,7 @@ PaulGeorge",
         }
 
         [Test]
-        public void TestAbs()
+        public async Task TestAbs()
         {
             Assert.AreEqual(0, StandardFilters.Abs(_contextV20, "notNumber"));
             Assert.AreEqual(10, StandardFilters.Abs(_contextV20, 10));
@@ -1540,22 +1545,22 @@ PaulGeorge",
             Assert.AreEqual(30.60, StandardFilters.Abs(_contextV20, "30.60"));
             Assert.AreEqual(0, StandardFilters.Abs(_contextV20, "30.60a"));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "17",
                 template: "{{ -17 | abs }}");
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "17",
                 template: "{{ 17 | abs }}");
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "4",
                 template: "{{ 4 | abs }}");
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "19.86",
                 template: "{{ '-19.86' | abs }}");
         }
 
         [Test]
-        public void TestAtLeast()
+        public async Task TestAtLeast()
         {
             Assert.AreEqual("notNumber", StandardFilters.AtLeast(_contextV20, "notNumber", 5));
             Assert.AreEqual(5, StandardFilters.AtLeast(_contextV20, 5, 5));
@@ -1569,16 +1574,16 @@ PaulGeorge",
             Assert.AreEqual("10a", StandardFilters.AtLeast(_contextV20, "10a", 5));
             Assert.AreEqual("4b", StandardFilters.AtLeast(_contextV20, "4b", 5));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "5",
                 template: "{{ 4 | at_least: 5 }}");
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "4",
                 template: "{{ 4 | at_least: 3 }}");
         }
 
         [Test]
-        public void TestAtMost()
+        public async Task TestAtMost()
         {
             Assert.AreEqual("notNumber", StandardFilters.AtMost(_contextV20, "notNumber", 5));
             Assert.AreEqual(5, StandardFilters.AtMost(_contextV20, 5, 5));
@@ -1592,16 +1597,16 @@ PaulGeorge",
             Assert.AreEqual("4a", StandardFilters.AtMost(_contextV20, "4a", 5));
             Assert.AreEqual("10b", StandardFilters.AtMost(_contextV20, "10b", 5));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "4",
                 template: "{{ 4 | at_most: 5 }}");
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "3",
                 template: "{{ 4 | at_most: 3 }}");
         }
 
         [Test]
-        public void TestCompact()
+        public async Task TestCompact()
         {
             CollectionAssert.AreEqual(new[] { "business", "celebrities", "lifestyle", "sports", "technology" }, StandardFilters.Compact(new string[] { "business", null, "celebrities", null, null, "lifestyle", "sports", null, "technology", null }));
             CollectionAssert.AreEqual(new[] { "business", "celebrities" }, StandardFilters.Compact(new string[] { "business", "celebrities" }));
@@ -1626,7 +1631,7 @@ PaulGeorge",
                 }
             };
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: @"
 - business
 - celebrities
@@ -1641,7 +1646,7 @@ PaulGeorge",
 {% endfor %}",
                 localVariables: Hash.FromAnonymousObject(siteAnonymousObject));
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: @"
 - business
 - celebrities
@@ -1710,7 +1715,7 @@ PaulGeorge",
         // In this example, assume you have a list of products and you want to show your kitchen products separately.
         // Using where, you can create an array containing only the products that have a "type" of "kitchen"
         [Test]
-        public void TestWhere_ShopifySample1()
+        public async Task TestWhere_ShopifySample1()
         {
             var products = new[] {
                 new { title = "Vacuum", type = "cleaning" },
@@ -1720,7 +1725,7 @@ PaulGeorge",
             };
 
             // First Shopify sample
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "\r\n\r\nKitchen products:\r\n\r\n- Spatula\r\n\r\n- Garlic press\r\n",
                 template: @"{% assign kitchen_products = products | where: ""type"", ""kitchen"" %}
 
@@ -1735,7 +1740,7 @@ Kitchen products:
         // Say instead you have a list of products and you only want to show those that are available to buy.
         // You can where with a property name but no target value to include all products with a truthy "available" value.
         [Test]
-        public void TestWhere_ShopifySample2()
+        public async Task TestWhere_ShopifySample2()
         {
             List<Hash> products = new List<Hash> {
                 new Hash { { "title", "Coffee mug" }, { "available", true } },
@@ -1744,7 +1749,7 @@ Kitchen products:
                 new Hash { { "title", "Boring sneakers" }, { "available", true } }
             };
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "\r\n\r\nAvailable products:\r\n\r\n- Coffee mug\r\n\r\n- Boring sneakers\r\n",
                 template: @"{% assign available_products = products | where: ""available"" %}
 
@@ -1759,7 +1764,7 @@ Available products:
         // The where filter can also be used to find a single object in an array when combined with the first filter.
         // For example, say you want to show off the shirt in your new fall collection.
         [Test]
-        public void TestWhere_ShopifySample3()
+        public async Task TestWhere_ShopifySample3()
         {
             List<Hash> products = new List<Hash> {
                 new Hash { { "title", "Little black dress" }, { "type", "dress" } },
@@ -1768,7 +1773,7 @@ Available products:
                 new Hash { { "title", "Hawaiian print sweater vest" }, { "type", "shirt" }  }
             };
 
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "\r\n\r\nFeatured product: Hawaiian print sweater vest",
                 template: @"{% assign new_shirt = products | where: ""type"", ""shirt"" | first %}
 
@@ -1777,7 +1782,7 @@ Featured product: {{ new_shirt.title }}",
         }
 
         [Test]
-        public void TestWhere_NonStringCompare()
+        public async Task TestWhere_NonStringCompare()
         {
             var products = new[] {
                 new { title = "Vacuum", type = "cleaning", price = 199.99f },
@@ -1787,7 +1792,7 @@ Featured product: {{ new_shirt.title }}",
             };
 
             // The products array has a price of 199.99f, compare to the value 199.99
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "\r\n\r\nCheapest products:\r\n\r\n- Vacuum\r\n",
                 template: @"{% assign cheap_products = products | where: ""price"", 199.99 %}
 
@@ -1798,7 +1803,7 @@ Cheapest products:
                 localVariables: Hash.FromAnonymousObject(new { products }));
 
             // The products array has a price of 7.0f, compare to the integer 7
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "\r\n\r\nCheapest products:\r\n\r\n- Spatula\r\n",
                 template: @"{% assign cheap_products = products | where: ""price"", 7 %}
 
@@ -1809,7 +1814,7 @@ Cheapest products:
                 localVariables: Hash.FromAnonymousObject(new { products }));
 
             // The products array has a price of 7.0f, compare to the string '7.0'
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "\r\n\r\nCheapest products:\r\n\r\n- Spatula\r\n",
                 template: @"{% assign cheap_products = products | where: ""price"", '7.0' %}
 
@@ -1834,9 +1839,9 @@ Cheapest products:
         }
 
         [Test]
-        public void TestConcat_LiquidSample_SingleFilter()
+        public async Task TestConcat_LiquidSample_SingleFilter()
         {
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "\r\n\r\n\r\n\r\n- apples\r\n\r\n- oranges\r\n\r\n- peaches\r\n\r\n- carrots\r\n\r\n- turnips\r\n\r\n- potatoes\r\n",
                 template: @"{% assign fruits = 'apples, oranges, peaches' | split: ', ' %}
 {% assign vegetables = 'carrots, turnips, potatoes' | split: ', ' %}
@@ -1847,9 +1852,9 @@ Cheapest products:
         }
 
         [Test]
-        public void TestConcat_LiquidSample_ChainedFilters()
+        public async Task TestConcat_LiquidSample_ChainedFilters()
         {
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "\r\n\r\n\r\n\r\n\r\n- apples\r\n\r\n- oranges\r\n\r\n- peaches\r\n\r\n- carrots\r\n\r\n- turnips\r\n\r\n- potatoes\r\n\r\n- chairs\r\n\r\n- tables\r\n\r\n- shelves\r\n",
                 template: @"{% assign fruits = 'apples, oranges, peaches' | split: ', ' %}
 {% assign vegetables = 'carrots, turnips, potatoes' | split: ', ' %}
@@ -1877,9 +1882,9 @@ Cheapest products:
         /// Reverses the order of the items in an array. reverse cannot reverse a string.
         /// </summary>
         [Test]
-        public void TestReverse_LiquidSample()
+        public async Task TestReverse_LiquidSample()
         {
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: "\r\nplums, peaches, oranges, apples",
                 template: @"{% assign my_array = 'apples, oranges, peaches, plums' | split: ', ' %}
 {{ my_array | reverse | join: ', ' }}");
@@ -1890,9 +1895,9 @@ Cheapest products:
         ///  reverse the array, and rejoin it by chaining together filters.
         /// </summary>
         [Test]
-        public void TestReverse_LiquidSample_StringOnly()
+        public async Task TestReverse_LiquidSample_StringOnly()
         {
-            Helper.AssertTemplateResult(
+            await Helper.AssertTemplateResultAsync(
                 expected: ".moT rojaM ot lortnoc dnuorG",
                 template: "{{ 'Ground control to Major Tom.' | split: '' | reverse | join: '' }}");
         }

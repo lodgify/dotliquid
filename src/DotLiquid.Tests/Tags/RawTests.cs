@@ -1,5 +1,6 @@
 using DotLiquid.Exceptions;
 using NUnit.Framework;
+using System.Threading.Tasks;
 
 namespace DotLiquid.Tests.Tags
 {
@@ -7,40 +8,40 @@ namespace DotLiquid.Tests.Tags
     public class RawTests
     {
         [Test]
-        public void TestTagInRaw()
+        public async Task  TestTagInRaw()
         {
-            Helper.AssertTemplateResult("{% comment %} test {% endcomment %}",
+            await Helper.AssertTemplateResultAsync("{% comment %} test {% endcomment %}",
                 "{% raw %}{% comment %} test {% endcomment %}{% endraw %}");
         }
 
         [Test]
-        public void TestOutputInRaw()
+        public async Task TestOutputInRaw()
         {
-            Helper.AssertTemplateResult("{{ test }}",
+            await Helper.AssertTemplateResultAsync("{{ test }}",
                 "{% raw %}{{ test }}{% endraw %}");
         }
 
         [Test]
-        public void TestRawWithErbLikeTrimmingWhitespace()
+        public async Task TestRawWithErbLikeTrimmingWhitespace()
         {
-            Helper.AssertTemplateResult("{{ test }}", "{%- raw %}{{ test }}{%- endraw %}");
-            Helper.AssertTemplateResult("{{ test }}", "{% raw -%}{{ test }}{% endraw -%}");
-            Helper.AssertTemplateResult("{{ test }}", "{%- raw -%}{{ test }}{%- endraw -%}");
-            Helper.AssertTemplateResult("{{ test }}", "{%-raw-%}{{ test }}{%-endraw-%}");
+            await Helper.AssertTemplateResultAsync("{{ test }}", "{%- raw %}{{ test }}{%- endraw %}");
+            await Helper.AssertTemplateResultAsync("{{ test }}", "{% raw -%}{{ test }}{% endraw -%}");
+            await Helper.AssertTemplateResultAsync("{{ test }}", "{%- raw -%}{{ test }}{%- endraw -%}");
+            await Helper.AssertTemplateResultAsync("{{ test }}", "{%-raw-%}{{ test }}{%-endraw-%}");
         }
 
         [Test]
-        public void TestPartialInRaw()
+        public async Task TestPartialInRaw()
         {
-            Helper.AssertTemplateResult(" Foobar {% invalid ", "{% raw %} Foobar {% invalid {% endraw %}");
-            Helper.AssertTemplateResult(" Foobar invalid %} ", "{% raw %} Foobar invalid %} {% endraw %}");
-            Helper.AssertTemplateResult(" Foobar {{ invalid ", "{% raw %} Foobar {{ invalid {% endraw %}");
-            Helper.AssertTemplateResult(" Foobar invalid }} ", "{% raw %} Foobar invalid }} {% endraw %}");
-            Helper.AssertTemplateResult(" Foobar {% invalid {% {% endraw ", "{% raw %} Foobar {% invalid {% {% endraw {% endraw %}");
-            Helper.AssertTemplateResult(" Foobar {% {% {% ", "{% raw %} Foobar {% {% {% {% endraw %}");
-            Helper.AssertTemplateResult(" test {% raw %} {% endraw %}", "{% raw %} test {% raw %} {% {% endraw %}endraw %}");
-            Helper.AssertTemplateResult(" Foobar {{ invalid 1", "{% raw %} Foobar {{ invalid {% endraw %}{{ 1 }}");
-            Helper.AssertTemplateResult(" Foobar {% foo {% bar %}", "{% raw %} Foobar {% foo {% bar %}{% endraw %}");
+            await Helper.AssertTemplateResultAsync(" Foobar {% invalid ", "{% raw %} Foobar {% invalid {% endraw %}");
+            await Helper.AssertTemplateResultAsync(" Foobar invalid %} ", "{% raw %} Foobar invalid %} {% endraw %}");
+            await Helper.AssertTemplateResultAsync(" Foobar {{ invalid ", "{% raw %} Foobar {{ invalid {% endraw %}");
+            await Helper.AssertTemplateResultAsync(" Foobar invalid }} ", "{% raw %} Foobar invalid }} {% endraw %}");
+            await Helper.AssertTemplateResultAsync(" Foobar {% invalid {% {% endraw ", "{% raw %} Foobar {% invalid {% {% endraw {% endraw %}");
+            await Helper.AssertTemplateResultAsync(" Foobar {% {% {% ", "{% raw %} Foobar {% {% {% {% endraw %}");
+            await Helper.AssertTemplateResultAsync(" test {% raw %} {% endraw %}", "{% raw %} test {% raw %} {% {% endraw %}endraw %}");
+            await Helper.AssertTemplateResultAsync(" Foobar {{ invalid 1", "{% raw %} Foobar {{ invalid {% endraw %}{{ 1 }}");
+            await Helper.AssertTemplateResultAsync(" Foobar {% foo {% bar %}", "{% raw %} Foobar {% foo {% bar %}{% endraw %}");
         }
 
         [Test]

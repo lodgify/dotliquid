@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
+using System.Threading.Tasks;
 using DotLiquid.Exceptions;
 using NUnit.Framework;
 
@@ -28,11 +29,11 @@ namespace DotLiquid.Tests
         }
 
         [Test]
-        public void TestSyntaxException()
+        public async Task TestSyntaxException()
         {
             Template template = null;
             Assert.DoesNotThrow(() => { template = Template.Parse(" {{ errors.syntax_exception }} "); });
-            string result = template.Render(Hash.FromAnonymousObject(new { errors = new ExceptionDrop() }));
+            string result = await template.RenderAsync(Hash.FromAnonymousObject(new { errors = new ExceptionDrop() }));
             Assert.AreEqual(" Liquid syntax error: syntax exception ", result);
 
             Assert.AreEqual(1, template.Errors.Count);
@@ -40,11 +41,11 @@ namespace DotLiquid.Tests
         }
 
         [Test]
-        public void TestArgumentException()
+        public async Task TestArgumentException()
         {
             Template template = null;
             Assert.DoesNotThrow(() => { template = Template.Parse(" {{ errors.argument_exception }} "); });
-            string result = template.Render(Hash.FromAnonymousObject(new { errors = new ExceptionDrop() }));
+            string result = await template.RenderAsync(Hash.FromAnonymousObject(new { errors = new ExceptionDrop() }));
             Assert.AreEqual(" Liquid error: argument exception ", result);
 
             Assert.AreEqual(1, template.Errors.Count);
@@ -58,11 +59,11 @@ namespace DotLiquid.Tests
         }
 
         [Test]
-        public void TestUnrecognizedOperator()
+        public async Task TestUnrecognizedOperator()
         {
             Template template = null;
             Assert.DoesNotThrow(() => { template = Template.Parse(" {% if 1 =! 2 %}ok{% endif %} "); });
-            Assert.AreEqual(" Liquid error: Unknown operator =! ", template.Render());
+            Assert.AreEqual(" Liquid error: Unknown operator =! ", await template.RenderAsync());
 
             Assert.AreEqual(1, template.Errors.Count);
             Assert.IsInstanceOf<ArgumentException>(template.Errors[0]);
@@ -74,7 +75,7 @@ namespace DotLiquid.Tests
             Template template = null;
             Assert.DoesNotThrow(() => { template = Template.Parse(" {{ errors.interrupt_exception }} "); });
             var localVariables = Hash.FromAnonymousObject(new { errors = new ExceptionDrop() });
-            var exception = Assert.Throws<InterruptException>(() => template.Render(localVariables));
+            var exception = Assert.ThrowsAsync<InterruptException>(async () => await template.RenderAsync(localVariables));
 
             Assert.AreEqual("interrupted", exception.Message);
         }
@@ -83,9 +84,9 @@ namespace DotLiquid.Tests
         public void TestMaximumIterationsExceededError()
         {
             var template = Template.Parse(" {% for i in (1..100000) %} {{ i }} {% endfor %} ");
-            Assert.Throws<MaximumIterationsExceededException>(() =>
+            Assert.ThrowsAsync<MaximumIterationsExceededException>(async () =>
             {
-                template.Render(new RenderParameters(CultureInfo.InvariantCulture)
+                await template.RenderAsync(new RenderParameters(CultureInfo.InvariantCulture)
                 {
                     MaxIterations = 50
                 });
@@ -96,9 +97,9 @@ namespace DotLiquid.Tests
         public void TestTimeoutError()
         {
             var template = Template.Parse(" {% for i in (1..1000000) %} {{ i }} {% endfor %} ");
-            Assert.Throws<System.TimeoutException>(() =>
+            Assert.ThrowsAsync<System.TimeoutException>(async () =>
             {
-                template.Render(new RenderParameters(CultureInfo.InvariantCulture)
+                await template.RenderAsync(new RenderParameters(CultureInfo.InvariantCulture)
                 {
                     Timeout = 100 //ms
                 });
@@ -119,9 +120,9 @@ namespace DotLiquid.Tests
                 formatProvider: CultureInfo.InvariantCulture,
                 cancellationToken: source.Token);
 
-            Assert.Throws<System.OperationCanceledException>(() =>
+            Assert.ThrowsAsync<System.OperationCanceledException>(async () =>
             {
-                template.Render(RenderParameters.FromContext(context, CultureInfo.InvariantCulture));
+                await template.RenderAsync(RenderParameters.FromContext(context, CultureInfo.InvariantCulture));
             });
         }
 
@@ -131,9 +132,9 @@ namespace DotLiquid.Tests
             var template = Template.Parse("{{test}}");
             Hash assigns = new Hash((h, k) => { throw new SyntaxException("Unknown variable '" + k + "'"); });
 
-            Assert.Throws<SyntaxException>(() =>
+            Assert.ThrowsAsync<SyntaxException>(async () =>
             {
-                var output = template.Render(new RenderParameters(CultureInfo.InvariantCulture)
+                var output = await template.RenderAsync(new RenderParameters(CultureInfo.InvariantCulture)
                 {
                     LocalVariables = assigns,
                     ErrorsOutputMode = ErrorsOutputMode.Rethrow
@@ -142,12 +143,12 @@ namespace DotLiquid.Tests
         }
 
         [Test]
-        public void TestErrorsOutputModeSuppress()
+        public async Task TestErrorsOutputModeSuppress()
         {
             var template = Template.Parse("{{test}}");
             Hash assigns = new Hash((h, k) => { throw new SyntaxException("Unknown variable '" + k + "'"); });
 
-            var output = template.Render(new RenderParameters(CultureInfo.InvariantCulture)
+            var output = await template.RenderAsync(new RenderParameters(CultureInfo.InvariantCulture)
             {
                 LocalVariables = assigns,
                 ErrorsOutputMode = ErrorsOutputMode.Suppress
@@ -156,12 +157,12 @@ namespace DotLiquid.Tests
         }
 
         [Test]
-        public void TestErrorsOutputModeDisplay()
+        public async Task TestErrorsOutputModeDisplay()
         {
             var template = Template.Parse("{{test}}");
             Hash assigns = new Hash((h, k) => { throw new SyntaxException("Unknown variable '" + k + "'"); });
 
-            var output = template.Render(new RenderParameters(CultureInfo.InvariantCulture)
+            var output = await template.RenderAsync(new RenderParameters(CultureInfo.InvariantCulture)
             {
                 LocalVariables = assigns,
                 ErrorsOutputMode = ErrorsOutputMode.Display
