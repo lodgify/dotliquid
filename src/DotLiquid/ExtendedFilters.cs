@@ -17,11 +17,7 @@ namespace DotLiquid
         {
             return input.IsNullOrWhiteSpace()
                 ? input
-#if CORE
                 : Regex.Replace(input, @"\b(\w)", m => m.Value.ToUpper(), RegexOptions.None, Template.RegexTimeOut);
-#else
-                : context.CurrentCulture.TextInfo.ToTitleCase(input);
-#endif
         }
 
         /// <summary>

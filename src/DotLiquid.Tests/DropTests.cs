@@ -132,25 +132,6 @@ namespace DotLiquid.Tests
             }
         }
 
-#if !CORE
-        internal class DataRowDrop : Drop
-        {
-            private readonly System.Data.DataRow _dataRow;
-
-            public DataRowDrop(System.Data.DataRow dataRow)
-            {
-                _dataRow = dataRow;
-            }
-
-            public override object BeforeMethod(string method)
-            {
-                if (_dataRow.Table.Columns.Contains(method))
-                    return _dataRow[method];
-                return null;
-            }
-        }
-#endif
-
         internal class CamelCaseDrop : Drop
         {
             public int ProductID
@@ -371,23 +352,6 @@ namespace DotLiquid.Tests
         {
             Assert.AreEqual("", await Template.Parse("{{ nulldrop.a_method }}").RenderAsync(Hash.FromAnonymousObject(new { nulldrop = new NullDrop() })));
         }
-
-#if !CORE
-        [Test]
-        public async Task TestDataRowDrop()
-        {
-            System.Data.DataTable dataTable = new System.Data.DataTable();
-            dataTable.Columns.Add("Column1");
-            dataTable.Columns.Add("Column2");
-
-            System.Data.DataRow dataRow = dataTable.NewRow();
-            dataRow["Column1"] = "Hello";
-            dataRow["Column2"] = "World";
-
-            Template tpl = Template.Parse(" {{ row.column1 }} ");
-            Assert.AreEqual(" Hello ", await tpl.RenderAsync(Hash.FromAnonymousObject(new { row = new DataRowDrop(dataRow) })));
-        }
-#endif
 
         [Test]
         public async Task TestRubyNamingConventionPrintsHelpfulErrorIfMissingPropertyWouldMatchCSharpNamingConvention()

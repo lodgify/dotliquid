@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 
 namespace DotLiquid
@@ -9,11 +9,8 @@ namespace DotLiquid
         {
             var scope = new CultureScope(CultureInfo.CurrentCulture);
             
-#if CORE
             CultureInfo.CurrentCulture = new CultureInfo(name);
-#else
-            System.Threading.Thread.CurrentThread.CurrentCulture = new CultureInfo(name);
-#endif
+
             return scope;
         }
 
@@ -28,11 +25,7 @@ namespace DotLiquid
 
             public void Dispose()
             {
-#if CORE
                 CultureInfo.CurrentCulture = this.culture;
-#else
-                System.Threading.Thread.CurrentThread.CurrentCulture =  this.culture;
-#endif
             }
         }
     }
